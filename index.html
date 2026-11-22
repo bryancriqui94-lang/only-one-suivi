@@ -4504,7 +4504,7 @@ function reelForm(r) {
   const tp = r.type || "Reel";
   const netChecks = R_NETS.map((n) => '<label class="check"><input type="checkbox" class="r-net" value="' + n + '" ' + (nets.includes(n) ? "checked" : "") + '> ' + n + "</label>").join("");
   const slides = Array.isArray(r.slides) ? r.slides : [];
-  const slidesBlock = '<label class="r-slides-wrap" style="' + (tp === "Carrousel" ? "" : "display:none") + '">Slides du carrousel (une par ligne)<textarea id="r-slides" rows="7" placeholder="Slide 1 (hook) : ...">' + esc(slides.join("\n")) + '</textarea></label>';
+  const slidesBlock = '<div class="r-slides-wrap" style="' + (tp === "Carrousel" ? "" : "display:none") + '"><label>Slides du carrousel (une par ligne)<textarea id="r-slides" rows="7" placeholder="Slide 1 (hook) : ...">' + esc(slides.join("\n")) + '</textarea></label><button type="button" class="btn-s" id="r-gen-btn" style="margin-top:6px">Générer les visuels</button></div>';
   const conceptBlock = '<label class="r-concept-wrap" style="' + (tp === "Carrousel" ? "display:none" : "") + '"><span class="r-concept-lbl">' + (tp === "Post" ? "Texte du post" : "Concept du Reel") + '</span><textarea id="r-concept" rows="4" placeholder="Ce que tu dis ou montres">' + esc(r.concept) + '</textarea></label>';
   openSheet(head(r.id ? "Modifier la publication" : "Nouvelle publication") +
     '<form id="f-reel" novalidate>' +
@@ -4520,6 +4520,12 @@ function reelForm(r) {
     '<div class="actions">' + (r.id ? '<button class="danger" type="button" id="del-btn">Supprimer</button>' : "<span></span>") + '<button class="primary" type="submit">Enregistrer</button></div>' +
     "</form>");
   $("#r-hook").focus();
+  const genBtn = $("#r-gen-btn");
+  if (genBtn) genBtn.addEventListener("click", () => {
+    const raw = (($("#r-slides") || {}).value || "").split("\n").map((s) => s.trim()).filter(Boolean);
+    if (!raw.length) return toast("Ajoute d'abord des slides");
+    carrouselVisuels({ hook: $("#r-hook").value.trim(), slides: raw, cta: $("#r-cta").value.trim(), pilier: $("#r-pil").value });
+  });
   $("#r-type").addEventListener("change", (e) => {
     const t = e.target.value;
     const sw = document.querySelector(".r-slides-wrap"), cw = document.querySelector(".r-concept-wrap"), cl = document.querySelector(".r-concept-lbl");
@@ -4546,6 +4552,139 @@ function reelForm(r) {
     save("reels", r.id, data, r.id ? "Publication mise à jour" : "Publication ajoutée");
   });
   if (r.id) bindDelete("reels", r.id, "Publication");
+}
+
+// ===== Générateur de visuels de carrousel (canvas 1080x1350, couleurs Only One) =====
+const OO_COL = { burg: "#5C1A2E", burg2: "#632F40", burgDark: "#3A1220", cream: "#F0EEEA", cream2: "#FAF9F7", gold: "#C4A584", goldLight: "#DCC6A8", ink: "#1E1E1E" };
+// enlève le préfixe "Slide N (hook) :" / "Slide N :" / "Slide N (CTA) :" pour ne garder que le texte
+function slideParts(raw) {
+  const m = raw.match(/^\s*slide\s*\d+\s*(?:\(([^)]*)\))?\s*[:：.\-]?\s*(.*)$/i);
+  if (m) return { tag: (m[1] || "").trim().toLowerCase(), text: (m[2] || "").trim() || raw.trim() };
+  return { tag: "", text: raw.trim() };
+}
+function wrapText(ctx, text, maxW) {
+  const words = text.split(/\s+/), lines = [];
+  let line = "";
+  for (const w of words) {
+    const test = line ? line + " " + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+// dessine une slide sur un canvas et retourne le canvas
+function drawSlide(part, idx, total, meta) {
+  const W = 1080, H = 1350, cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  const isHook = idx === 0;
+  const isCta = /cta/.test(part.tag) || idx === total - 1;
+  const dark = isHook || isCta; // slides d'accroche et de fin en burgundy
+  // fond
+  if (dark) {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, OO_COL.burg2); g.addColorStop(0.55, OO_COL.burg); g.addColorStop(1, OO_COL.burgDark);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.fillStyle = OO_COL.cream; ctx.fillRect(0, 0, W, H);
+  }
+  const fg = dark ? OO_COL.cream : OO_COL.burg;
+  const accent = dark ? OO_COL.goldLight : OO_COL.gold;
+  // cadre or fin
+  ctx.strokeStyle = accent; ctx.lineWidth = 3;
+  ctx.strokeRect(54, 54, W - 108, H - 108);
+  // wordmark haut
+  ctx.fillStyle = accent;
+  ctx.font = "600 30px Poppins, system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("ONLY ONE", 96, 128);
+  ctx.textAlign = "right";
+  ctx.font = "500 26px Poppins, system-ui, sans-serif";
+  ctx.fillStyle = dark ? "rgba(240,238,234,.55)" : "rgba(92,26,46,.5)";
+  ctx.fillText((idx + 1) + " / " + total, W - 96, 126);
+  // losange or au centre pour la slide hook
+  if (isHook) {
+    ctx.save(); ctx.translate(W / 2, 250); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = accent; ctx.fillRect(-13, -13, 26, 26); ctx.restore();
+  }
+  // texte principal
+  const text = part.text;
+  ctx.textAlign = "center";
+  ctx.fillStyle = fg;
+  // taille selon longueur et rôle
+  let size = isHook ? 76 : 60;
+  if (text.length > 120) size -= 12;
+  if (text.length > 200) size -= 10;
+  const maxW = W - 240;
+  let lines, fontW = isHook ? "700" : "600", fam = "Poppins, system-ui, sans-serif";
+  // le hook en serif Lora pour l'élégance
+  if (isHook) fam = "Lora, Georgia, serif";
+  do {
+    ctx.font = fontW + " " + size + "px " + fam;
+    lines = wrapText(ctx, text, maxW);
+    if (lines.length * size * 1.3 <= H - 460) break;
+    size -= 6;
+  } while (size > 30);
+  const lh = size * 1.32;
+  let y = H / 2 - (lines.length - 1) * lh / 2;
+  // petit label de rôle
+  if (isHook || isCta) {
+    ctx.font = "600 28px Poppins, system-ui, sans-serif";
+    ctx.fillStyle = accent;
+    ctx.fillText(isHook ? "" : "", W / 2, y - lh);
+  }
+  ctx.fillStyle = fg;
+  ctx.font = fontW + " " + size + "px " + fam;
+  for (const ln of lines) { ctx.fillText(ln, W / 2, y); y += lh; }
+  // trait or sous le texte du hook
+  if (isHook) {
+    ctx.strokeStyle = accent; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(W / 2 - 60, y + 10); ctx.lineTo(W / 2 + 60, y + 10); ctx.stroke();
+  }
+  // signature bas
+  ctx.textAlign = "center";
+  ctx.font = "italic 500 30px Lora, Georgia, serif";
+  ctx.fillStyle = dark ? "rgba(240,238,234,.75)" : "rgba(92,26,46,.65)";
+  if (isCta) ctx.fillText("Vivez. Je m'occupe du reste.", W / 2, H - 120);
+  else { ctx.font = "500 26px Poppins, system-ui, sans-serif"; ctx.fillStyle = dark ? "rgba(240,238,234,.5)" : "rgba(92,26,46,.45)"; ctx.fillText("@bryan.criqui", W / 2, H - 120); }
+  return cv;
+}
+function canvasToBlob(cv) {
+  return new Promise((res) => cv.toBlob((b) => res(b), "image/png"));
+}
+async function carrouselVisuels(car) {
+  const parts = car.slides.map(slideParts);
+  const total = parts.length;
+  // s'assurer que les polices sont prêtes pour un rendu net
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+  const canvases = parts.map((p, i) => drawSlide(p, i, total, car));
+  const thumbs = canvases.map((cv, i) => '<div class="cv-item"><img class="cv-thumb" src="' + cv.toDataURL("image/png") + '" alt="Slide ' + (i + 1) + '"><button type="button" class="btn-s" data-dl="' + i + '">Slide ' + (i + 1) + '</button></div>').join("");
+  openSheet(head("Visuels du carrousel") +
+    '<p class="hint" style="margin-top:0">' + total + ' slides aux couleurs Only One, format 1080x1350 (Instagram). Télécharge-les une par une ou toutes d\'un coup, puis publie-les dans l\'ordre.</p>' +
+    '<div class="actions" style="margin-bottom:10px"><button type="button" class="primary" id="cv-all">Tout télécharger</button><button type="button" class="btn-s" data-close>Fermer</button></div>' +
+    '<div class="cv-grid">' + thumbs + '</div>');
+  const base = "OnlyOne_carrousel_" + (car.hook || "slide").replace(/[^a-zA-Z0-9]+/g, "_").slice(0, 32);
+  async function dl1(i) {
+    let dl = null;
+    try { dl = await window.claude.use("downloads"); } catch (e) {}
+    if (!dl) return toast("Le téléchargement n'est pas disponible ici");
+    const blob = await canvasToBlob(canvases[i]);
+    await dl.save({ filename: base + "_" + String(i + 1).padStart(2, "0") + ".png", data: blob });
+  }
+  document.querySelectorAll("[data-dl]").forEach((b) => b.addEventListener("click", async () => {
+    try { await dl1(Number(b.dataset.dl)); toast("Slide " + (Number(b.dataset.dl) + 1) + " enregistrée"); }
+    catch (e) { toast("Échec de l'enregistrement"); }
+  }));
+  const allBtn = $("#cv-all");
+  if (allBtn) allBtn.addEventListener("click", async () => {
+    allBtn.disabled = true; allBtn.textContent = "Téléchargement…";
+    try {
+      for (let i = 0; i < canvases.length; i++) { await dl1(i); await new Promise((r) => setTimeout(r, 400)); }
+      toast(total + " visuels enregistrés");
+    } catch (e) { toast("Certains visuels n'ont pas pu être enregistrés"); }
+    allBtn.disabled = false; allBtn.textContent = "Tout télécharger";
+  });
 }
 
 function reelPlanSheet() {
@@ -5049,6 +5188,10 @@ document.addEventListener("touchend", function (e) { var n = Date.now(); if (n -
 .rday input{position:absolute;opacity:0;width:0;height:0}
 .rday span{display:inline-block;min-width:40px;text-align:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--surface)}
 .rday input:checked+span{background:linear-gradient(145deg,#6B3647,#541C21);color:#F0EEEA;border-color:#541C21}
+.cv-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cv-item{display:flex;flex-direction:column;gap:6px}
+.cv-thumb{width:100%;border-radius:10px;border:1px solid var(--line);background:#fff;aspect-ratio:1080/1350;object-fit:cover}
+.cv-item .btn-s{width:100%}
 </style>
 
 <style>
