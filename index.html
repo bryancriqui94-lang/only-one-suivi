@@ -601,7 +601,7 @@ function setView(v) {
   document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-current", b.dataset.v === v ? "page" : "false"));
   (_a = document.querySelector('.tab[data-v="'.concat(v, '"]'))) == null ? void 0 : _a.scrollIntoView({ block: "nearest", inline: "nearest" });
   $("#menu-btn").hidden = true;
-  const labels = { menu: "Nouvelle presta", prospection: "Nouveau RDV", carnet: "Nouveau contact", rdv: "Nouveau RDV", devis: "Nouveau devis", accueil: "Nouvelle presta", prestations: "Nouvelle presta", clients: "Nouveau client", tarifs: "Nouvelle formule", agenda: "Nouvelle tâche", depenses: "Nouvelle dépense", compta: "Nouvelle presta", arr: "Nouveau contrat" };
+  const labels = { menu: "Nouvelle presta", prospection: "Nouveau RDV", carnet: "Nouveau contact", rdv: "Nouveau RDV", devis: "Nouveau devis", accueil: "Nouvelle presta", prestations: "Nouvelle presta", clients: "Nouveau client", tarifs: "Nouvelle formule", agenda: "Nouvelle tâche", depenses: "Nouvelle dépense", compta: "Nouvelle presta", arr: "Nouveau contrat", apporteurs: "Nouvel apport" };
   $("#add-btn").textContent = labels[v] || "Nouvelle presta";
   closeSheet();
   render();
@@ -617,7 +617,7 @@ window.addEventListener("hashchange", () => {
 });
 $("#add-btn").addEventListener("click", () => {
   if (!ready) return;
-  ({ prospection: () => rdvForm(), carnet: () => contactForm(), rdv: () => rdvForm(), devis: () => devisEditor(), clients: () => clientForm(), tarifs: () => formuleForm(), agenda: () => tacheForm(), depenses: () => depenseForm(), arr: () => contratForm() }[state.view] || (() => prestaForm()))();
+  ({ prospection: () => rdvForm(), carnet: () => contactForm(), rdv: () => rdvForm(), devis: () => devisEditor(), clients: () => clientForm(), tarifs: () => formuleForm(), agenda: () => tacheForm(), depenses: () => depenseForm(), arr: () => contratForm(), apporteurs: () => apportForm() }[state.view] || (() => prestaForm()))();
 });
 function render() {
   const v = $("#view");
@@ -629,7 +629,7 @@ function render() {
   const a = document.activeElement, keep = {};
   v.querySelectorAll("[data-keep]").forEach((el) => keep[el.id] = el.value);
   const focusId = a && v.contains(a) && a.id ? a.id : null, selS = a && a.selectionStart, selE = a && a.selectionEnd;
-  ({ aujourdhui: renderToday, chiffres: renderChiffres, menu: renderMenu, prospection: renderProspection, carnet: renderContacts, rdv: renderRdv, devis: renderDevisList, accueil: renderDash, agenda: renderAgenda, clients: renderClients, prestations: renderPrestas, depenses: renderDepenses, tarifs: renderTarifs, compta: renderCompta, arr: renderArr })[state.view](v);
+  ({ aujourdhui: renderToday, chiffres: renderChiffres, menu: renderMenu, prospection: renderProspection, carnet: renderContacts, rdv: renderRdv, devis: renderDevisList, accueil: renderDash, agenda: renderAgenda, clients: renderClients, prestations: renderPrestas, depenses: renderDepenses, tarifs: renderTarifs, compta: renderCompta, arr: renderArr, apporteurs: renderApporteurs })[state.view](v);
   decorateHub(v);
   Object.entries(keep).forEach(([id, val]) => {
     const el = document.getElementById(id);
@@ -4042,6 +4042,359 @@ function arrWatchCfg() {
   }, () => {});
 }
 
+// ===== Apporteurs d'affaires =====
+VIEWS.push("apporteurs");
+HUBS.find((h) => h.k === "personnes").v.push("apporteurs");
+SUBL.apporteurs = "Apporteurs";
+state.apporteurs = [];
+state.apports = [];
+state.commissions = [];
+state.loaded.apporteurs = false;
+state.loaded.apports = false;
+state.loaded.commissions = false;
+ARM.push("ap_pay", "ap_enc");
+const AP_STATUTS = ["Actif", "En pause", "Arrêté"];
+const AP_FORMES = ["Indépendant (il facture)", "Particulier occasionnel"];
+const AP_TYPES = ["Entreprise", "Commune ou collectivité", "Club ou association"];
+const APT_STATUTS = ["Déclaré", "Enregistré", "RDV pris", "Proposition envoyée", "Signé", "Perdu", "Refusé (déjà connu)", "Expiré"];
+const APT_OUVERTS = ["Déclaré", "Enregistré", "RDV pris", "Proposition envoyée"];
+const COM_STATUTS = ["En attente d'encaissement", "À payer", "Payée", "Annulée"];
+const AP_DEF = { primeRdv: 50, maxRdvMois: 4, commPct: 10, forfaitCommune: 150, forfaitClub: 80, dureeMois: 6 };
+const apOf = (id) => state.apporteurs.find((a) => a.id === id) || {};
+const apNom = (id) => apOf(id).nom || "Apporteur";
+const apBar = (a) => ({ ...AP_DEF, ...Object.fromEntries(Object.entries(a || {}).filter(([k, v]) => k in AP_DEF && v !== "" && v != null)) });
+const aptPill = (s) => '<span class="pill ' + ({ "Déclaré": "st-relance", "Enregistré": "st-devis", "RDV pris": "st-ok", "Proposition envoyée": "st-ok", "Signé": "st-paid", "Perdu": "st-lost", "Refusé (déjà connu)": "st-lost", "Expiré": "st-lost" }[s] || "st-devis") + '">' + esc(s) + "</span>";
+const comPill = (s) => '<span class="pill ' + ({ "À payer": "st-relance", "Payée": "st-paid", "Annulée": "st-lost" }[s] || "st-devis") + '">' + esc(s) + "</span>";
+const normTxt = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").replace(/\b(mairie|de|du|la|le|les|hotel|restaurant|sarl|sas|l|d)\b/g, " ").replace(/\s+/g, " ").trim();
+function apStats(apId, year) {
+  const ap = state.apports.filter((x) => !apId || x.apporteurId === apId);
+  const inY = (d) => !year || String(d || "").startsWith(year);
+  const rdv = ap.filter((x) => x.rdvLe && inY(x.rdvLe)).length;
+  const sig = ap.filter((x) => x.statut === "Signé" && inY(x.signeLe));
+  const ca = sig.reduce((s, x) => s + N(x.montant), 0);
+  const tr = ap.filter((x) => ["Signé", "Perdu"].includes(x.statut)).length;
+  const coms = state.commissions.filter((c) => !apId || c.apporteurId === apId);
+  const aPayer = coms.filter((c) => c.statut === "À payer").reduce((s, c) => s + N(c.montant), 0);
+  const attente = coms.filter((c) => c.statut === "En attente d'encaissement").reduce((s, c) => s + N(c.montant), 0);
+  const paye = coms.filter((c) => c.statut === "Payée" && inY(c.payeeLe)).reduce((s, c) => s + N(c.montant), 0);
+  return { n: ap.length, ouverts: ap.filter((x) => APT_OUVERTS.includes(x.statut)).length, rdv, signes: sig.length, ca, taux: tr ? sig.length / tr : NaN, aPayer, attente, paye };
+}
+function aptExpire(x) {
+  if (x.expireLe) return x.expireLe;
+  const a = apOf(x.apporteurId);
+  return x.declareLe && typeof addMonths === "function" ? addMonths(x.declareLe, N(apBar(a).dureeMois) || 6) : "";
+}
+function apAlerts() {
+  const t = iso(), y = t.slice(0, 4), out = [];
+  state.apports.filter((x) => x.statut === "Déclaré").forEach((x) => {
+    const lim = addDays(x.declareLe || t, 7);
+    out.push({ cls: lim <= t ? "bad" : "warn", t: "Confirmer l'enregistrement : " + x.structure, s: "Déclaré par " + apNom(x.apporteurId) + " le " + fdate(x.declareLe) + " · réponse promise avant le " + fdate(lim), id: x.id, k: "apt" });
+  });
+  state.apports.filter((x) => APT_OUVERTS.includes(x.statut) && x.statut !== "Déclaré").forEach((x) => {
+    const e = aptExpire(x);
+    if (e && daysBetween(t, e) <= 15) out.push({ cls: e < t ? "bad" : "warn", t: (e < t ? "Enregistrement expiré : " : "Expire bientôt : ") + x.structure, s: apNom(x.apporteurId) + " · " + (e < t ? "depuis le " : "le ") + fdate(e) + (e < t ? " · le prospect redevient libre" : " · fais avancer avant l'échéance"), id: x.id, k: "apt" });
+  });
+  state.commissions.filter((c) => c.statut === "À payer").forEach((c) => {
+    const lim = c.dueLe || addDays(c.creeLe || t, 30);
+    out.push({ cls: lim < t ? "bad" : "info", t: eur2(c.montant) + " à verser à " + apNom(c.apporteurId), s: c.nature + (c.structure ? " · " + c.structure : "") + " · avant le " + fdate(lim), id: c.id, k: "com" });
+  });
+  state.apporteurs.forEach((a) => {
+    const p = apStats(a.id, y).paye;
+    if (p > 1200) out.push({ cls: "info", t: a.nom + " a reçu " + eur(p) + " cette année", s: "Au dessus de 1 200 € : vérifie la déclaration des honoraires (DAS2) avec ton comptable", id: a.id, k: "ap" });
+  });
+  return out;
+}
+function renderApporteurs(v) {
+  const t = iso(), y = t.slice(0, 4), S = apStats(null, y), al = apAlerts();
+  const f = state.apFilter || "En cours";
+  const filters = ["En cours", "Signés", "Tous"];
+  const rows = state.apports.filter((x) => f === "Tous" || (f === "Signés" ? x.statut === "Signé" : APT_OUVERTS.includes(x.statut))).sort((a, b) => (b.declareLe || "").localeCompare(a.declareLe || ""));
+  const aps = state.apporteurs.slice().sort((a, b) => (a.statut === "Arrêté") - (b.statut === "Arrêté") || apStats(b.id).ca - apStats(a.id).ca || (a.nom || "").localeCompare(b.nom || "", "fr"));
+  const coms = state.commissions.filter((c) => c.statut !== "Annulée" && (c.statut !== "Payée" || String(c.payeeLe || "").startsWith(y))).sort((a, b) => COM_STATUTS.indexOf(b.statut === "À payer" ? "Z" : b.statut) - COM_STATUTS.indexOf(a.statut === "À payer" ? "Z" : a.statut) || (b.creeLe || "").localeCompare(a.creeLe || ""));
+  const apList = aps.length ? '<div class="list">' + aps.map((a) => {
+    const s = apStats(a.id);
+    return '<button class="item" type="button" data-ap="' + esc(a.id) + '"><span class="t">' + esc(a.nom) + (a.societe ? " · " + esc(a.societe) : "") + (a.statut && a.statut !== "Actif" ? " <small>(" + esc(a.statut) + ")</small>" : "") + '</span><span class="a">' + eur(s.ca) + '</span><span class="m">' + plural(s.n, "apport") + " · " + plural(s.rdv, "RDV") + " · " + s.signes + " signé" + (s.signes > 1 ? "s" : "") + (isFinite(s.taux) ? " · " + pct(s.taux) + " de signature" : "") + '</span><span class="b">' + (s.aPayer ? '<span class="pill st-relance">' + eur2(s.aPayer) + " à payer</span>" : "") + "</span></button>";
+  }).join("") + "</div>" : '<div class="empty"><p class="q">Aucun apporteur pour l\'instant</p><p>Ajoute les personnes qui t\'ouvrent des portes : tu suivras qui t\'a présenté qui, les RDV obtenus, les signatures et les commissions à verser.</p><button class="ghost" type="button" id="ap-first">Ajouter mon premier apporteur</button></div>';
+  const aptList = rows.length ? '<div class="list">' + rows.map((x) => {
+    const e = aptExpire(x);
+    const info = x.statut === "Signé" ? "Signé le " + fdate(x.signeLe) + (N(x.montant) ? " · " + eur(x.montant) + " / an" : "") : x.statut === "RDV pris" && x.rdvLe ? "RDV le " + fdate(x.rdvLe) : APT_OUVERTS.includes(x.statut) && e ? "Enregistré jusqu'au " + fdate(e) : "Déclaré le " + fdate(x.declareLe);
+    return '<button class="item" type="button" data-apt="' + esc(x.id) + '"><span class="t">' + esc(x.structure) + ' <small>' + esc(x.type || "") + '</small></span><span class="b">' + aptPill(x.statut) + '</span><span class="m">' + esc(apNom(x.apporteurId)) + " · " + esc(info) + "</span></button>";
+  }).join("") + "</div>" : '<p class="hint">' + (state.apports.length ? "Rien dans ce filtre." : "Les entreprises, communes et clubs que tes apporteurs te présentent apparaîtront ici.") + "</p>";
+  const comList = coms.length ? '<div class="list">' + coms.map((c) => '<div class="item"><span class="t">' + esc(apNom(c.apporteurId)) + " · " + esc(c.nature) + '</span><span class="a">' + eur2(c.montant) + '</span><span class="m">' + esc(c.structure || "") + (c.statut === "Payée" ? " · payée le " + fdate(c.payeeLe) : c.statut === "À payer" ? " · avant le " + fdate(c.dueLe || addDays(c.creeLe || t, 30)) : " · dès que le client a payé") + '</span><span class="b">' + (c.statut === "À payer" ? '<button class="btn-s p" type="button" data-cpay="' + esc(c.id) + '">Payée</button>' : c.statut === "En attente d'encaissement" ? '<button class="btn-s" type="button" data-cenc="' + esc(c.id) + '">Client a payé</button>' : comPill(c.statut)) + "</span></div>").join("") + "</div>" : '<p class="hint">Aucune commission pour l\'instant. Elles se créent toutes seules quand un apport passe en « RDV pris » ou « Signé ».</p>';
+  v.innerHTML = '<div class="head"><div><h1>Apporteurs d\'affaires</h1><p class="sub">Qui t\'a présenté qui, les RDV, les signatures et ce que tu leur dois</p></div><div class="tools"><button class="ghost" type="button" id="ap-new">Nouvel apporteur</button><button class="ghost" type="button" id="ap-csv">Exporter</button></div></div>' +
+    '<section class="kpis"><div class="kpi lead"><div class="l">À verser</div><div class="v">' + eur2(S.aPayer) + '</div><div class="s">' + (S.attente ? eur(S.attente) + " en attente d'encaissement" : "commissions dues") + '</div></div>' +
+    '<div class="kpi"><div class="l">Apports en cours</div><div class="v">' + S.ouverts + '</div><div class="s">' + plural(state.apporteurs.filter((a) => a.statut !== "Arrêté").length, "apporteur") + " actif" + (state.apporteurs.filter((a) => a.statut !== "Arrêté").length > 1 ? "s" : "") + '</div></div>' +
+    '<div class="kpi"><div class="l">RDV obtenus ' + y + '</div><div class="v">' + S.rdv + '</div><div class="s">' + (isFinite(S.taux) ? pct(S.taux) + " de signature" : "grâce à eux") + '</div></div>' +
+    '<div class="kpi"><div class="l">Signé grâce à eux</div><div class="v">' + eur(S.ca) + '</div><div class="s">en ' + y + " · " + eur(S.paye) + " versés</div></div></section>" +
+    (al.length ? '<section class="alerts">' + al.map((a) => '<button class="alert ' + a.cls + '" type="button" data-al="' + a.k + "|" + esc(a.id) + '"><span class="ic">Apporteur</span><span class="tx">' + esc(a.t) + "<small>" + esc(a.s) + '</small></span><span class="go">Ouvrir</span></button>').join("") + "</section>" : "") +
+    '<section><div class="head" style="margin-bottom:10px"><h2 style="margin:0">Apports</h2><div class="tools">' + filters.map((x) => '<button class="chip" type="button" data-apf="' + x + '" aria-pressed="' + (x === f) + '">' + x + "</button>").join("") + '<button class="ghost" type="button" id="apt-new">Nouvel apport</button></div></div>' + aptList + "</section>" +
+    '<div class="two"><section><h2>Tes apporteurs</h2>' + apList + "</section><section><h2>Commissions " + y + "</h2>" + comList + "</section></div>";
+  const g = (id) => v.querySelector("#" + id);
+  g("ap-new").addEventListener("click", () => apporteurForm());
+  g("ap-first") && g("ap-first").addEventListener("click", () => apporteurForm());
+  g("apt-new").addEventListener("click", () => apportForm());
+  g("ap-csv").addEventListener("click", apExport);
+  v.querySelectorAll("[data-apf]").forEach((b) => b.addEventListener("click", () => {
+    state.apFilter = b.dataset.apf;
+    render();
+  }));
+  v.querySelectorAll("[data-ap]").forEach((b) => b.addEventListener("click", () => apporteurSheet(apOf(b.dataset.ap))));
+  v.querySelectorAll("[data-apt]").forEach((b) => b.addEventListener("click", () => apportForm(state.apports.find((x) => x.id === b.dataset.apt))));
+  v.querySelectorAll("[data-al]").forEach((b) => b.addEventListener("click", () => {
+    const [k, id] = b.dataset.al.split("|");
+    if (k === "apt") apportForm(state.apports.find((x) => x.id === id));
+    else if (k === "ap") apporteurSheet(apOf(id));
+    else {
+      const c = state.commissions.find((x) => x.id === id);
+      c && apporteurSheet(apOf(c.apporteurId));
+    }
+  }));
+  v.querySelectorAll("[data-cpay]").forEach((b) => b.addEventListener("click", (e) => comPay(b.dataset.cpay, e.currentTarget)));
+  v.querySelectorAll("[data-cenc]").forEach((b) => b.addEventListener("click", (e) => comEnc(b.dataset.cenc, e.currentTarget)));
+}
+function armed(btn, label) {
+  if (btn.classList.contains("armed")) return true;
+  btn.classList.add("armed");
+  btn.dataset.lbl = btn.textContent;
+  btn.textContent = label || "Confirmer";
+  setTimeout(() => {
+    if (btn.isConnected && btn.classList.contains("armed")) {
+      btn.classList.remove("armed");
+      btn.textContent = btn.dataset.lbl;
+    }
+  }, 4000);
+  return false;
+}
+async function comPay(id, btn) {
+  const c = state.commissions.find((x) => x.id === id);
+  if (!c || (btn && !armed(btn, "Confirmer le paiement"))) return;
+  const t = iso(), a = apOf(c.apporteurId);
+  try {
+    const ref = await base.collection("depenses").add({ libelle: "Commission apporteur " + (a.nom || "") + (c.structure ? " · " + c.structure : ""), montant: N(c.montant), date: t, categorie: "Commissions apporteurs", notes: c.nature + (a.forme ? " · " + a.forme : "") });
+    await base.collection("commissions").doc(id).update({ statut: "Payée", payeeLe: t, depenseId: ref.id });
+    toast("Payée · ajoutée à tes dépenses");
+  } catch (e) {
+    toast(errMsg(e));
+  }
+}
+async function comEnc(id, btn) {
+  const c = state.commissions.find((x) => x.id === id);
+  if (!c || (btn && !armed(btn, "Le client a payé ?"))) return;
+  const t = iso();
+  try {
+    await base.collection("commissions").doc(id).update({ statut: "À payer", encaisseLe: t, dueLe: addDays(t, 30) });
+    toast("À verser à " + apNom(c.apporteurId) + " avant le " + fdate(addDays(t, 30)));
+  } catch (e) {
+    toast(errMsg(e));
+  }
+}
+function apporteurSheet(a) {
+  if (!a || !a.id) return;
+  const s = apStats(a.id), b = apBar(a), t = iso();
+  const aps = state.apports.filter((x) => x.apporteurId === a.id).sort((x, y) => (y.declareLe || "").localeCompare(x.declareLe || ""));
+  const coms = state.commissions.filter((c) => c.apporteurId === a.id && c.statut !== "Annulée").sort((x, y) => (y.creeLe || "").localeCompare(x.creeLe || ""));
+  const arr = (state.contrats || []).filter((c) => c.apporteur && normTxt(c.apporteur) === normTxt(a.nom) && c.statut !== "Résilié");
+  openSheet(head(a.nom) +
+    '<div class="cinfo">' + (a.societe ? "<div>" + esc(a.societe) + "</div>" : "") + "<div>" + [a.tel ? '<a href="tel:' + esc(a.tel.replace(/\s/g, "")) + '">' + esc(a.tel) + "</a>" : "", a.email ? '<a href="mailto:' + esc(a.email) + '">' + esc(a.email) + "</a>" : ""].filter(Boolean).join(" · ") + '</div><div class="k">' + esc(a.forme || AP_FORMES[0]) + " · " + esc(a.statut || "Actif") + (a.contratLe ? " · contrat signé le " + fdate(a.contratLe) : " · contrat pas encore signé") + "</div></div>" +
+    '<div class="mini"><div><span class="l">Apports</span><span class="v">' + s.n + '</span></div><div><span class="l">RDV</span><span class="v">' + s.rdv + '</span></div><div><span class="l">Signés</span><span class="v">' + s.signes + '</span></div><div><span class="l">CA apporté</span><span class="v">' + eur(s.ca) + '</span></div><div><span class="l">À verser</span><span class="v">' + eur2(s.aPayer) + '</span></div><div><span class="l">Versé ' + t.slice(0, 4) + '</span><span class="v">' + eur2(apStats(a.id, t.slice(0, 4)).paye) + "</span></div></div>" +
+    '<p class="hint" style="margin:0 0 12px">Barème : ' + eur(b.primeRdv) + " par RDV entreprise (" + b.maxRdvMois + " max par mois), " + b.commPct + " % de la première année, " + eur(b.forfaitCommune) + " par commune, " + eur(b.forfaitClub) + " par club. Prospect réservé " + b.dureeMois + " mois." + (arr.length ? " Contrats récurrents à son nom : " + arr.length + "." : "") + "</p>" +
+    '<div class="dv-exp" style="margin-bottom:14px"><button class="primary" type="button" id="aps-apt">Nouvel apport</button><button class="ghost" type="button" id="aps-edit">Modifier</button><button class="ghost" type="button" id="aps-ct">Préparer son contrat</button><button class="ghost" type="button" id="aps-fiche">Fiche barème</button>' + (a.email ? '<a class="ghost" style="text-decoration:none" href="mailto:' + esc(a.email) + '">Écrire</a>' : "") + "</div>" +
+    "<h2>Ses apports</h2>" + (aps.length ? '<div class="list" style="margin-bottom:14px">' + aps.map((x) => '<button class="item" type="button" data-sapt="' + esc(x.id) + '"><span class="t">' + esc(x.structure) + '</span><span class="b">' + aptPill(x.statut) + '</span><span class="m">' + esc(x.type || "") + " · déclaré le " + fdate(x.declareLe) + "</span></button>").join("") + "</div>" : '<p class="hint">Aucun apport pour l\'instant.</p>') +
+    "<h2>Ses commissions</h2>" + (coms.length ? '<div class="list">' + coms.map((c) => '<div class="item"><span class="t">' + esc(c.nature) + (c.structure ? " · " + esc(c.structure) : "") + '</span><span class="a">' + eur2(c.montant) + '</span><span class="m">' + (c.statut === "Payée" ? "Payée le " + fdate(c.payeeLe) : c.statut === "À payer" ? "À verser avant le " + fdate(c.dueLe || addDays(c.creeLe || t, 30)) : c.statut) + '</span><span class="b">' + (c.statut === "À payer" ? '<button class="btn-s p" type="button" data-scpay="' + esc(c.id) + '">Payée</button>' : c.statut === "En attente d'encaissement" ? '<button class="btn-s" type="button" data-scenc="' + esc(c.id) + '">Client a payé</button>' : comPill(c.statut)) + "</span></div>").join("") + "</div>" : '<p class="hint">Aucune commission pour l\'instant.</p>'));
+  $("#aps-apt").addEventListener("click", () => apportForm({ apporteurId: a.id }));
+  $("#aps-edit").addEventListener("click", () => apporteurForm(a));
+  const juriV = { "Nom de l'apporteur": a.nom || "", "Adresse de l'apporteur": a.adresse || "", "SIRET de l'apporteur": a.siret || "", "Forme juridique de l'apporteur": a.societe || "", "Prime par rendez vous qualifié (€)": String(b.primeRdv), "Nombre maximum de rendez vous primés par mois": String(b.maxRdvMois), "Commission sur la première année (%)": String(b.commPct), "Forfait par convention commune (€)": String(b.forfaitCommune), "Forfait par contrat club (€)": String(b.forfaitClub), "Durée d'enregistrement d'un prospect (mois)": String(b.dureeMois), "Nom du client": a.nom || "" };
+  $("#aps-ct").addEventListener("click", () => juriEditor({ tpl: "apporteur", opt: a.forme === AP_FORMES[1] ? 2 : 1, v: juriV, clientNom: a.nom }));
+  $("#aps-fiche").addEventListener("click", () => juriEditor({ tpl: "bareme-apporteur", v: { ...juriV, "Exemple : montant annuel du contrat (€)": "3000", "Exemple : commission correspondante (€)": String(Math.round(3000 * N(b.commPct) / 100)) }, clientNom: a.nom }));
+  document.querySelectorAll("[data-sapt]").forEach((x) => x.addEventListener("click", () => apportForm(state.apports.find((y) => y.id === x.dataset.sapt))));
+  document.querySelectorAll("[data-scpay]").forEach((x) => x.addEventListener("click", async (e) => {
+    const bt = e.currentTarget;
+    await comPay(x.dataset.scpay, bt);
+    if (!bt.classList.contains("armed")) setTimeout(() => apporteurSheet(apOf(a.id)), 400);
+  }));
+  document.querySelectorAll("[data-scenc]").forEach((x) => x.addEventListener("click", async (e) => {
+    const bt = e.currentTarget;
+    await comEnc(x.dataset.scenc, bt);
+    if (!bt.classList.contains("armed")) setTimeout(() => apporteurSheet(apOf(a.id)), 400);
+  }));
+}
+function apporteurForm(a) {
+  a = a || {};
+  const b = apBar(a);
+  const num = (id, lab, val, step) => '<label>' + lab + '<input id="' + id + '" type="number" min="0" step="' + (step || "any") + '" inputmode="decimal" value="' + esc(val) + '"></label>';
+  openSheet(head(a.id ? "Modifier l'apporteur" : "Nouvel apporteur") + '<form id="f-ap" novalidate>' +
+    '<div class="row2"><label>Nom et prénom<input id="ap-nom" value="' + esc(a.nom) + '" autocomplete="off"></label><label>Société ou activité<input id="ap-soc" value="' + esc(a.societe) + '" placeholder="Agent immobilier, expert comptable…" autocomplete="off"></label></div>' +
+    '<div class="row2"><label>Téléphone<input id="ap-tel" type="tel" value="' + esc(a.tel) + '"></label><label>Email<input id="ap-mail" type="email" value="' + esc(a.email) + '"></label></div>' +
+    '<label>Adresse<input id="ap-adr" value="' + esc(a.adresse) + '" autocomplete="off"></label>' +
+    '<div class="row2"><label>Statut juridique<select id="ap-forme">' + opts(AP_FORMES, a.forme || AP_FORMES[0]) + '</select></label><label>SIRET<input id="ap-siret" value="' + esc(a.siret) + '" inputmode="numeric"></label></div>' +
+    '<div class="row2"><label>Statut<select id="ap-st">' + opts(AP_STATUTS, a.statut || "Actif") + '</select></label><label>Contrat signé le<input id="ap-ctd" type="date" value="' + esc(a.contratLe) + '"></label></div>' +
+    '<fieldset><legend>Son barème</legend><div class="row2">' + num("ap-prime", "Prime par RDV entreprise (€)", b.primeRdv) + num("ap-max", "RDV primés max par mois", b.maxRdvMois, "1") + '</div><div class="row2">' + num("ap-pct", "Commission 1re année (%)", b.commPct) + num("ap-dur", "Prospect réservé (mois)", b.dureeMois, "1") + '</div><div class="row2">' + num("ap-fcom", "Forfait commune (€)", b.forfaitCommune) + num("ap-fclub", "Forfait club (€)", b.forfaitClub) + "</div></fieldset>" +
+    '<label>Notes<textarea id="ap-notes" placeholder="Son réseau, comment vous vous êtes connus, ce qui le motive…">' + esc(a.notes) + "</textarea></label>" +
+    '<div class="actions">' + (a.id ? '<button class="danger" type="button" id="del-btn">Supprimer</button>' : "<span></span>") + '<button class="primary" type="submit">Enregistrer</button></div></form>');
+  $("#ap-nom").focus();
+  $("#f-ap").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const data = { nom: $("#ap-nom").value.trim(), societe: $("#ap-soc").value.trim(), tel: $("#ap-tel").value.trim(), email: $("#ap-mail").value.trim(), adresse: $("#ap-adr").value.trim(), forme: $("#ap-forme").value, siret: $("#ap-siret").value.trim(), statut: $("#ap-st").value, contratLe: $("#ap-ctd").value, primeRdv: N($("#ap-prime").value), maxRdvMois: N($("#ap-max").value), commPct: N($("#ap-pct").value), dureeMois: N($("#ap-dur").value) || 6, forfaitCommune: N($("#ap-fcom").value), forfaitClub: N($("#ap-fclub").value), notes: $("#ap-notes").value.trim(), creeLe: a.creeLe || iso() };
+    if (!formCheck($("#f-ap"), [need(!!data.nom, "#ap-nom", "le nom de l'apporteur")])) return;
+    save("apporteurs", a.id, data, a.id ? "Apporteur mis à jour" : "Apporteur ajouté");
+  });
+  if (a.id) bindDelete("apporteurs", a.id, "Apporteur");
+}
+function apDoublons(name, selfId) {
+  const n = normTxt(name);
+  if (n.length < 3) return [];
+  const hit = (s) => {
+    const m = normTxt(s);
+    return m && (m === n || (m.length > 4 && n.includes(m)) || (n.length > 4 && m.includes(n)));
+  };
+  const out = [];
+  state.clients.filter((c) => hit(c.nom)).forEach((c) => out.push("client « " + c.nom + " »"));
+  (typeof ntAll === "function" && nt.status === "ok" ? ntAll() : []).filter((r) => hit(r.nom) && r.statut !== "À contacter").forEach((r) => out.push("prospect « " + (r.kind === "communes" ? "Mairie de " : "") + r.nom + " » (" + r.statut + ")"));
+  state.rdv.filter((r) => hit(r.structure) && (!r.date || r.date >= addDays(iso(), -183))).forEach((r) => out.push("RDV avec « " + r.structure + " »"));
+  state.apports.filter((x) => x.id !== selfId && hit(x.structure) && APT_OUVERTS.concat(["Signé"]).includes(x.statut)).forEach((x) => out.push("déjà apporté par " + apNom(x.apporteurId)));
+  return out.slice(0, 4);
+}
+function apportForm(x) {
+  x = x || {};
+  if (!state.apporteurs.length) {
+    toast("Ajoute d'abord ton apporteur");
+    return apporteurForm();
+  }
+  const t = iso();
+  const apOpts = state.apporteurs.filter((a) => a.statut !== "Arrêté" || a.id === x.apporteurId).map((a) => '<option value="' + esc(a.id) + '" ' + (a.id === x.apporteurId ? "selected" : "") + ">" + esc(a.nom) + "</option>").join("");
+  openSheet(head(x.id ? x.structure : "Nouvel apport") + '<form id="f-apt" novalidate>' +
+    '<label>Apporteur<select id="apt-ap">' + apOpts + "</select></label>" +
+    '<div class="row2"><label>Structure présentée<input id="apt-str" value="' + esc(x.structure) + '" placeholder="Entreprise, mairie, club…" autocomplete="off"></label><label>Type<select id="apt-type">' + opts(AP_TYPES, x.type || AP_TYPES[0]) + "</select></label></div>" +
+    '<div id="apt-dup" class="form-err warn" hidden></div>' +
+    '<div class="row2"><label>Interlocuteur<input id="apt-contact" value="' + esc(x.contact) + '" placeholder="Nom et fonction du décideur" autocomplete="off"></label><label>Ville<input id="apt-ville" value="' + esc(x.ville) + '"></label></div>' +
+    '<div class="row2"><label>Téléphone<input id="apt-tel" type="tel" value="' + esc(x.tel) + '"></label><label>Email<input id="apt-mail" type="email" value="' + esc(x.email) + '"></label></div>' +
+    '<div class="row2"><label>Déclaré le<input id="apt-decl" type="date" value="' + esc(x.declareLe || t) + '"></label><label>Statut<select id="apt-st">' + opts(APT_STATUTS, x.statut || "Déclaré") + "</select></label></div>" +
+    '<div class="row2" id="apt-rdv-w"><label>Date du RDV<input id="apt-rdv" type="date" value="' + esc(x.rdvLe) + '"></label><label>Heure<input id="apt-h" type="time" value="' + esc(x.rdvHeure) + '"></label></div>' +
+    '<label class="check" id="apt-mkrdv-w"' + (x.rdvId ? " hidden" : "") + '><input type="checkbox" id="apt-mkrdv" ' + (x.id ? "" : "checked") + "> Ajouter ce RDV à mes RDV Only One</label>" +
+    '<div class="row2" id="apt-sig-w"><label>Signé le<input id="apt-sig" type="date" value="' + esc(x.signeLe || t) + '"></label><label>Montant de la 1re année (€)<input id="apt-mt" type="number" min="0" step="any" inputmode="decimal" value="' + esc(x.montant || "") + '"></label></div>' +
+    '<label class="check" id="apt-arr-w"><input type="checkbox" id="apt-arr"> Créer aussi le contrat récurrent (ARR)</label>' +
+    '<p class="hint" id="apt-calc"></p>' +
+    '<label>Notes<textarea id="apt-notes" placeholder="Contexte, besoins, ce qui a été dit…">' + esc(x.notes) + "</textarea></label>" +
+    '<div class="actions">' + (x.id ? '<button class="danger" type="button" id="del-btn">Supprimer</button>' : "<span></span>") + '<button class="primary" type="submit">Enregistrer</button></div></form>');
+  const upd = () => {
+    const st = $("#apt-st").value, a = apOf($("#apt-ap").value), b = apBar(a), ty = $("#apt-type").value, mt = N($("#apt-mt").value);
+    $("#apt-rdv-w").hidden = !["RDV pris", "Proposition envoyée", "Signé", "Perdu"].includes(st);
+    $("#apt-mkrdv-w").hidden = !!x.rdvId || st !== "RDV pris" || !$("#apt-rdv").value;
+    $("#apt-sig-w").hidden = st !== "Signé";
+    $("#apt-arr-w").hidden = st !== "Signé" || x.statut === "Signé";
+    const exp = $("#apt-decl").value ? addMonths($("#apt-decl").value, N(b.dureeMois) || 6) : "";
+    let c = "";
+    if (st === "Signé") c = ty === "Entreprise" ? (mt ? "Commission : " + b.commPct + " % de " + eur(mt) + " = " + eur2(mt * N(b.commPct) / 100) + ", à verser au fil des encaissements." : "Indique le montant de la première année pour calculer la commission.") : "Forfait de " + eur(ty === "Commune ou collectivité" ? b.forfaitCommune : b.forfaitClub) + " à verser après le premier paiement.";
+    else if (st === "RDV pris") c = ty === "Entreprise" ? "Prime de " + eur(b.primeRdv) + " créée à l'enregistrement (" + b.maxRdvMois + " RDV primés max par mois), même si l'entreprise ne signe pas." : "Pas de prime de RDV pour une commune ou un club : seul le forfait est dû à la signature.";
+    else if (APT_OUVERTS.includes(st) && exp) c = "Prospect réservé à " + (a.nom || "l'apporteur") + " jusqu'au " + fdate(exp) + ".";
+    $("#apt-calc").textContent = c;
+  };
+  const dup = () => {
+    const d = apDoublons($("#apt-str").value, x.id);
+    $("#apt-dup").hidden = !d.length;
+    $("#apt-dup").innerHTML = d.length ? "<b>Déjà connu d'Only One ?</b><ul>" + d.map((s) => "<li>" + esc(s) + "</li>").join("") + "</ul>Selon le contrat, un prospect déjà connu ne peut pas être enregistré au nom de l'apporteur." : "";
+  };
+  ["#apt-st", "#apt-ap", "#apt-type", "#apt-mt", "#apt-decl", "#apt-rdv"].forEach((s) => {
+    $(s).addEventListener("input", upd);
+    $(s).addEventListener("change", upd);
+  });
+  $("#apt-str").addEventListener("input", dup);
+  upd();
+  dup();
+  if (!x.id) $("#apt-str").focus();
+  $("#f-apt").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const st = $("#apt-st").value, apId = $("#apt-ap").value, a = apOf(apId), b = apBar(a);
+    const data = { ...x, apporteurId: apId, structure: $("#apt-str").value.trim(), type: $("#apt-type").value, contact: $("#apt-contact").value.trim(), ville: $("#apt-ville").value.trim(), tel: $("#apt-tel").value.trim(), email: $("#apt-mail").value.trim(), declareLe: $("#apt-decl").value, statut: st, notes: $("#apt-notes").value.trim(), majLe: iso() };
+    delete data.id;
+    data.expireLe = data.declareLe ? addMonths(data.declareLe, N(b.dureeMois) || 6) : "";
+    if (!$("#apt-rdv-w").hidden) {
+      data.rdvLe = $("#apt-rdv").value;
+      data.rdvHeure = $("#apt-h").value;
+    }
+    if (st === "Signé") {
+      data.signeLe = $("#apt-sig").value;
+      data.montant = N($("#apt-mt").value);
+    }
+    if (!formCheck($("#f-apt"), [need(!!apId, "#apt-ap", "l'apporteur"), need(!!data.structure, "#apt-str", "la structure présentée"), need(!!data.declareLe, "#apt-decl", "la date de déclaration"), st === "RDV pris" ? need(!!data.rdvLe, "#apt-rdv", "la date du RDV") : null, st === "Signé" && data.type === "Entreprise" ? need(data.montant > 0, "#apt-mt", "le montant de la première année") : null].filter(Boolean))) return;
+    try {
+      let id = x.id;
+      if (st === "RDV pris" && $("#apt-mkrdv").checked && !$("#apt-mkrdv-w").hidden) {
+        const r = await base.collection("rdv").add({ nom: data.contact || "", structure: data.structure, email: data.email, tel: data.tel, date: data.rdvLe, heure: data.rdvHeure || "", duree: 30, typeRdv: "", lieu: data.ville || "", objet: "Découverte", source: "Apporteur d'affaires", statut: "Prévu", potentiel: 0, notes: "Présenté par " + (a.nom || "un apporteur") + (data.notes ? "\n" + data.notes : ""), action: "", relance: "", clientId: "", creeLe: iso(), origine: "apport", majLe: new Date().toISOString() });
+        data.rdvId = r.id;
+      }
+      if (id) await base.collection("apports").doc(id).set(data);
+      else id = (await base.collection("apports").add(data)).id;
+      const has = (nat) => state.commissions.some((c) => c.apportId === id && c.nature === nat && c.statut !== "Annulée");
+      const add = (o) => base.collection("commissions").add({ apporteurId: apId, apportId: id, structure: data.structure, creeLe: iso(), ...o });
+      const made = [];
+      if (["RDV pris", "Proposition envoyée", "Signé", "Perdu"].includes(st) && data.type === "Entreprise" && data.rdvLe && !has("Prime RDV")) {
+        const m = data.rdvLe.slice(0, 7);
+        const n = state.commissions.filter((c) => c.apporteurId === apId && c.nature === "Prime RDV" && c.statut !== "Annulée" && String(c.mois || "") === m).length;
+        if (n < N(b.maxRdvMois) && N(b.primeRdv) > 0) {
+          await add({ nature: "Prime RDV", montant: N(b.primeRdv), mois: m, statut: "À payer", dueLe: addDays(iso(), 30) });
+          made.push("prime de " + eur(b.primeRdv));
+        } else if (N(b.primeRdv) > 0) made.push("plafond de " + b.maxRdvMois + " primes ce mois atteint, pas de prime");
+      }
+      if (st === "Signé") {
+        if (data.type === "Entreprise" && !has("Commission")) {
+          const mt = Math.round(N(data.montant) * N(b.commPct)) / 100;
+          if (mt > 0) {
+            await add({ nature: "Commission", montant: mt, base: N(data.montant), taux: N(b.commPct), statut: "En attente d'encaissement" });
+            made.push("commission de " + eur2(mt));
+          }
+        } else if (data.type !== "Entreprise" && !has("Forfait")) {
+          const f2 = N(data.type === "Commune ou collectivité" ? b.forfaitCommune : b.forfaitClub);
+          if (f2 > 0) {
+            await add({ nature: "Forfait", montant: f2, statut: "En attente d'encaissement" });
+            made.push("forfait de " + eur(f2));
+          }
+        }
+        if (!$("#apt-arr-w").hidden && $("#apt-arr").checked && N(data.montant) > 0) {
+          await base.collection("contrats").add({ clientId: "", clientNom: data.structure, intitule: "Apporté par " + (a.nom || ""), mensuel: Math.round(N(data.montant) / 12 * 100) / 100, debut: data.signeLe, duree: 12, reconduction: true, statut: "Actif", resilieLe: "", apporteur: a.nom || "", commission: data.type === "Entreprise" ? N(b.commPct) : 0, notes: "" });
+          made.push("contrat ARR créé");
+        }
+      }
+      if (["Perdu", "Refusé (déjà connu)", "Expiré"].includes(st)) {
+        for (const c of state.commissions.filter((c) => c.apportId === id && c.statut === "En attente d'encaissement")) await base.collection("commissions").doc(c.id).update({ statut: "Annulée" });
+      }
+      closeSheet();
+      toast("Apport enregistré" + (made.length ? " · " + made.join(" · ") : ""));
+    } catch (er) {
+      toast(errMsg(er));
+    }
+  });
+  if (x.id) bindDelete("apports", x.id, "Apport");
+}
+function apExport() {
+  const rows = [["Apporteur", "Statut juridique", "SIRET", "Structure", "Nature", "Montant", "Statut", "Créée le", "Payée le"]];
+  state.commissions.filter((c) => c.statut !== "Annulée").sort((a, b) => (a.creeLe || "").localeCompare(b.creeLe || "")).forEach((c) => {
+    const a = apOf(c.apporteurId);
+    rows.push([a.nom || "", a.forme || "", a.siret || "", c.structure || "", c.nature, String(N(c.montant)).replace(".", ","), c.statut, c.creeLe || "", c.payeeLe || ""]);
+  });
+  if (rows.length < 2) return toast("Aucune commission à exporter");
+  window.claude.use("downloads").then((dl) => dl.save({ filename: "Commissions apporteurs " + iso() + ".csv", data: csv(rows) })).then(() => toast("Fichier enregistré"), () => toast("L'export n'a pas pu se faire"));
+}
+const _todayAp = todayActions;
+todayActions = function () {
+  const A = _todayAp();
+  apAlerts().filter((a) => a.k !== "ap").forEach((a) => A.push({ tag: "Apporteur", cls: a.cls, t: a.t, s: a.s, btns: a.k === "com" ? [["Payée", "ap_pay", a.id, "p"], ["Ouvrir", "ap_com", a.id]] : [["Ouvrir", "ap_apt", a.id, "p"]], o: a.k === "com" ? 4 : 3 }));
+  return A.sort((a, b) => a.o - b.o);
+};
+const _doActAp = doAct;
+doAct = async function (k, id, btn) {
+  if (k === "ap_pay") {
+    if (!btn.classList.contains("armed")) return _doActAp(k, id, btn);
+    return comPay(id);
+  }
+  if (k === "ap_com") {
+    const c = state.commissions.find((x) => x.id === id);
+    return c && apporteurSheet(apOf(c.apporteurId));
+  }
+  if (k === "ap_apt") return apportForm(state.apports.find((x) => x.id === id));
+  return _doActAp(k, id, btn);
+};
+
 (async () => {
   const h = location.hash.slice(1);
   setView(VIEWS.includes(h) && h !== "menu" ? h : "aujourdhui");
@@ -4486,5 +4839,6 @@ var ooLastTouch = 0;
 document.addEventListener("touchend", function (e) { var n = Date.now(); if (n - ooLastTouch < 300 && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) e.preventDefault(); ooLastTouch = n; }, { passive: false });
 </script>
 <style>#oo-prev .pv-scroll{justify-items:safe center}#oo-prev .pv-page{flex:none}</style>
+<style>body{min-height:100vh;min-height:100dvh}.cinfo a{color:var(--gold);text-decoration:none;font-weight:500}</style>
 </body>
 </html>
