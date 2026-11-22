@@ -4406,9 +4406,11 @@ state.reels = [];
 state.loaded.reels = false;
 state.rfilter = "tout";
 state.rnet = "tout";
+state.rtype = "tout";
 
 const R_STATUTS = ["A faire", "Tourné", "Monté", "Publié"];
 const R_NETS = ["Instagram", "LinkedIn", "Facebook"];
+const R_TYPES = ["Reel", "Post", "Carrousel"];
 const R_ST_CLASS = { "A faire": "st-devis", "Tourné": "st-relance", "Monté": "st-ok", "Publié": "st-paid" };
 const R_PILIERS = ["Coulisses & expertise", "Preuve & valeur", "Art de vivre", "Offres & services", "Personnel & vision"];
 // Réglages du planning de publication (jours de la semaine par réseau). 1 = lundi … 7 = dimanche.
@@ -4458,35 +4460,39 @@ const R_NET_IC = {
   Facebook: '<svg class="ni" viewBox="0 0 24 24"><path d="M14 8.5h2.5M13 21v-8m0 0V9.5A2.5 2.5 0 0115.5 7H16M13 13h-2.5" fill="none"/><rect x="3" y="3" width="18" height="18" rx="5"/></svg>'
 };
 
+const R_TYPE_CLASS = { "Reel": "st-ok", "Post": "st-relance", "Carrousel": "st-devis" };
 function renderReels(v) {
-  const flt = state.rfilter, net = state.rnet;
+  const flt = state.rfilter, net = state.rnet, typ = state.rtype;
   let list = state.reels.slice().sort((a, b) => (a.ordre || a.num || 0) - (b.ordre || b.num || 0));
   if (net !== "tout") list = list.filter((r) => (r.reseaux || R_NETS).includes(net));
+  if (typ !== "tout") list = list.filter((r) => (r.type || "Reel") === typ);
   if (flt !== "tout") list = list.filter((r) => (r.statut || "A faire") === flt);
   const count = (st) => state.reels.filter((r) => (r.statut || "A faire") === st).length;
   const afaire = count("A faire"), publ = count("Publié");
 
   const chip = (lbl, val, cur, key) => '<button type="button" class="chip" aria-pressed="' + (val === cur) + '" data-' + key + '="' + esc(val) + '">' + esc(lbl) + "</button>";
+  const typeBar = '<div class="tools">' + chip("Tout", "tout", typ, "rtyp") + R_TYPES.map((tp) => chip(tp === "Carrousel" ? "Carrousels" : tp + "s", tp, typ, "rtyp")).join("") + "</div>";
   const netBar = '<div class="tools">' + chip("Tous réseaux", "tout", net, "rnet") + R_NETS.map((n) => chip(n, n, net, "rnet")).join("") + "</div>";
-  const stBar = '<div class="tools">' + chip("Tout", "tout", flt, "rflt") + R_STATUTS.map((s) => chip(s, s, flt, "rflt")).join("") + "</div>";
+  const stBar = '<div class="tools">' + chip("Tout statut", "tout", flt, "rflt") + R_STATUTS.map((s) => chip(s, s, flt, "rflt")).join("") + "</div>";
 
   const row = (r) => {
-    const st = r.statut || "A faire";
+    const st = r.statut || "A faire", tp = r.type || "Reel";
     const nets = (r.reseaux || R_NETS).map((n) => '<span class="rnet-tag">' + esc(n) + "</span>").join("");
     return '<button type="button" class="item ritem" data-reel="' + esc(r.id) + '">' +
       '<span class="t">' + esc(r.hook) + '</span>' +
-      '<span class="b"><span class="pill ' + (R_ST_CLASS[st] || "") + '">' + esc(st) + '</span></span>' +
-      '<span class="m">' + esc(r.pilier) + ' · ' + esc(r.angle) + '</span>' +
+      '<span class="b"><span class="pill ' + (R_TYPE_CLASS[tp] || "") + '">' + esc(tp) + '</span> <span class="pill ' + (R_ST_CLASS[st] || "") + '">' + esc(st) + '</span></span>' +
+      '<span class="m">' + esc(r.pilier) + ' · ' + esc(r.angle || r.ton || "") + '</span>' +
       '<span class="b m">' + nets + (r.datePubliee ? ' <span class="rnet-tag">le ' + esc(fdate(r.datePubliee)) + '</span>' : '') + '</span></button>';
   };
 
   v.innerHTML = '<div><h1>Contenu</h1><p class="sub">' + afaire + ' à produire · ' + publ + ' publié' + (publ > 1 ? "s" : "") + ' · ' + state.reels.length + ' au total</p></div>' +
     '<button class="dict" type="button" id="reel-plan-btn"><span class="di"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span><b>Planning de publication</b><small>Choisis les jours où tu publies sur chaque réseau. Le rappel apparaît sur ta page Aujourd\'hui.</small></span></button>' +
-    netBar + stBar +
+    typeBar + netBar + stBar +
     (list.length ? '<section><div class="list">' + list.map(row).join("") + "</div></section>"
-      : '<div class="empty"><p class="q">Rien ici</p><p>Aucun Reel avec ce filtre. Change de filtre ou ajoute une idée avec le bouton +.</p></div>');
+      : '<div class="empty"><p class="q">Rien ici</p><p>Aucune publication avec ce filtre. Change de filtre ou ajoute une idée avec le bouton +.</p></div>');
 
   $("#reel-plan-btn").addEventListener("click", reelPlanSheet);
+  v.querySelectorAll("[data-rtyp]").forEach((b) => b.addEventListener("click", () => { state.rtype = b.dataset.rtyp; render(); }));
   v.querySelectorAll("[data-rnet]").forEach((b) => b.addEventListener("click", () => { state.rnet = b.dataset.rnet; render(); }));
   v.querySelectorAll("[data-rflt]").forEach((b) => b.addEventListener("click", () => { state.rfilter = b.dataset.rflt; render(); }));
   v.querySelectorAll("[data-reel]").forEach((b) => b.addEventListener("click", () => reelForm(state.reels.find((x) => x.id === b.dataset.reel))));
@@ -4495,35 +4501,51 @@ function renderReels(v) {
 function reelForm(r) {
   r = r || {};
   const nets = r.reseaux || R_NETS.slice();
+  const tp = r.type || "Reel";
   const netChecks = R_NETS.map((n) => '<label class="check"><input type="checkbox" class="r-net" value="' + n + '" ' + (nets.includes(n) ? "checked" : "") + '> ' + n + "</label>").join("");
-  openSheet(head(r.id ? "Modifier le Reel" : "Nouveau Reel") +
+  const slides = Array.isArray(r.slides) ? r.slides : [];
+  const slidesBlock = '<label class="r-slides-wrap" style="' + (tp === "Carrousel" ? "" : "display:none") + '">Slides du carrousel (une par ligne)<textarea id="r-slides" rows="7" placeholder="Slide 1 (hook) : ...">' + esc(slides.join("\n")) + '</textarea></label>';
+  const conceptBlock = '<label class="r-concept-wrap" style="' + (tp === "Carrousel" ? "display:none" : "") + '"><span class="r-concept-lbl">' + (tp === "Post" ? "Texte du post" : "Concept du Reel") + '</span><textarea id="r-concept" rows="4" placeholder="Ce que tu dis ou montres">' + esc(r.concept) + '</textarea></label>';
+  openSheet(head(r.id ? "Modifier la publication" : "Nouvelle publication") +
     '<form id="f-reel" novalidate>' +
-    '<label>Hook (3 premières secondes)<textarea id="r-hook" rows="2" required placeholder="La phrase qui arrête le scroll">' + esc(r.hook) + '</textarea></label>' +
-    '<div class="row2"><label>Pilier<select id="r-pil">' + opts(R_PILIERS, r.pilier || R_PILIERS[0]) + '</select></label>' +
-    '<label>Angle<input id="r-ang" value="' + esc(r.angle) + '" placeholder="Mythe à casser" autocomplete="off"></label></div>' +
-    '<label>Concept du Reel<textarea id="r-concept" rows="3" placeholder="Ce que tu filmes, comment">' + esc(r.concept) + '</textarea></label>' +
-    '<label>Call-to-action<textarea id="r-cta" rows="2" placeholder="Ce que tu demandes en fin de vidéo">' + esc(r.cta) + '</textarea></label>' +
+    '<div class="row2"><label>Type<select id="r-type">' + opts(R_TYPES, tp) + '</select></label>' +
+    '<label>Pilier<select id="r-pil">' + opts(R_PILIERS, r.pilier || R_PILIERS[0]) + '</select></label></div>' +
+    '<label>Hook (accroche)<textarea id="r-hook" rows="2" required placeholder="La phrase qui arrête le scroll">' + esc(r.hook) + '</textarea></label>' +
+    '<label>Ton ou angle<input id="r-ang" value="' + esc(r.angle || r.ton || "") + '" placeholder="Fun, Impactant, Motivant..." autocomplete="off"></label>' +
+    conceptBlock + slidesBlock +
+    '<label>Call-to-action<textarea id="r-cta" rows="2" placeholder="Ce que tu demandes à la fin">' + esc(r.cta) + '</textarea></label>' +
     '<label>Réseaux<div class="checks">' + netChecks + '</div></label>' +
     '<div class="row2"><label>Statut<select id="r-stat">' + opts(R_STATUTS, r.statut || "A faire") + '</select></label>' +
     '<label>Date publiée<input id="r-date" type="date" value="' + esc(r.datePubliee) + '"></label></div>' +
     '<div class="actions">' + (r.id ? '<button class="danger" type="button" id="del-btn">Supprimer</button>' : "<span></span>") + '<button class="primary" type="submit">Enregistrer</button></div>' +
     "</form>");
   $("#r-hook").focus();
+  $("#r-type").addEventListener("change", (e) => {
+    const t = e.target.value;
+    const sw = document.querySelector(".r-slides-wrap"), cw = document.querySelector(".r-concept-wrap"), cl = document.querySelector(".r-concept-lbl");
+    if (sw) sw.style.display = t === "Carrousel" ? "" : "none";
+    if (cw) cw.style.display = t === "Carrousel" ? "none" : "";
+    if (cl) cl.textContent = t === "Post" ? "Texte du post" : "Concept du Reel";
+  });
   $("#f-reel").addEventListener("submit", (e) => {
     e.preventDefault();
     const reseaux = Array.from(document.querySelectorAll(".r-net")).filter((c) => c.checked).map((c) => c.value);
-    const stat = $("#r-stat").value;
+    const stat = $("#r-stat").value, type = $("#r-type").value;
     const data = {
-      hook: $("#r-hook").value.trim(), pilier: $("#r-pil").value, angle: $("#r-ang").value.trim(),
-      concept: $("#r-concept").value.trim(), cta: $("#r-cta").value.trim(),
-      reseaux: reseaux.length ? reseaux : R_NETS.slice(), format: r.format || "9:16 · 15-30s",
+      type, hook: $("#r-hook").value.trim(), pilier: $("#r-pil").value, angle: $("#r-ang").value.trim(), ton: $("#r-ang").value.trim(),
+      concept: type === "Carrousel" ? "" : (($("#r-concept") || {}).value || "").trim(), cta: $("#r-cta").value.trim(),
+      reseaux: reseaux.length ? reseaux : R_NETS.slice(),
+      format: r.format || (type === "Reel" ? "9:16 · 15-30s" : type === "Carrousel" ? "Carrousel" : "Texte + 1 visuel"),
       statut: stat, datePubliee: stat === "Publié" ? ($("#r-date").value || iso()) : $("#r-date").value,
       num: r.num, ordre: r.ordre != null ? r.ordre : (r.num || state.reels.length + 1), creeLe: r.creeLe || iso()
     };
-    if (!formCheck($("#f-reel"), [need(!!data.hook, "#r-hook", "le hook du Reel")])) return;
-    save("reels", r.id, data, r.id ? "Reel mis à jour" : "Reel ajouté");
+    if (type === "Carrousel") {
+      data.slides = (($("#r-slides") || {}).value || "").split("\n").map((s) => s.trim()).filter(Boolean);
+    }
+    if (!formCheck($("#f-reel"), [need(!!data.hook, "#r-hook", "le hook de la publication")])) return;
+    save("reels", r.id, data, r.id ? "Publication mise à jour" : "Publication ajoutée");
   });
-  if (r.id) bindDelete("reels", r.id, "Reel");
+  if (r.id) bindDelete("reels", r.id, "Publication");
 }
 
 function reelPlanSheet() {
