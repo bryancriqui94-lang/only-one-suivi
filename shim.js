@@ -189,8 +189,9 @@
     var el = document.createElement("div");
     el.id = "oo-login";
     el.innerHTML = '<form id="oo-np" novalidate><div class="oo-brand">ONLY <span>◆</span> ONE</div><div class="oo-sub">Nouveau mot de passe</div>' +
-      '<label>Mot de passe<input id="oo-np1" type="password" autocomplete="new-password" minlength="8" required></label><p id="oo-msg"></p><button type="submit">Enregistrer</button></form>';
+      '<label>Nouveau mot de passe<input id="oo-np1" type="password" autocomplete="new-password" minlength="8" required></label><p id="oo-msg"></p><button type="submit">Enregistrer</button><button type="button" id="oo-np-x" class="oo-link">Annuler</button></form>';
     document.body.appendChild(el);
+    document.getElementById("oo-np-x").addEventListener("click", function () { el.remove(); });
     document.getElementById("oo-np").addEventListener("submit", async function (e) {
       e.preventDefault();
       var pw = document.getElementById("oo-np1").value;
