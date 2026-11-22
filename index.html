@@ -4840,5 +4840,87 @@ document.addEventListener("touchend", function (e) { var n = Date.now(); if (n -
 </script>
 <style>#oo-prev .pv-scroll{justify-items:safe center}#oo-prev .pv-page{flex:none}</style>
 <style>body{min-height:100vh;min-height:100dvh}.cinfo a{color:var(--gold);text-decoration:none;font-weight:500}</style>
+<style>
+/* Animations : transitions de pages et retour tactile des boutons */
+:root{--oo-ease:cubic-bezier(.22,.8,.24,1);--oo-spring:cubic-bezier(.34,1.56,.64,1)}
+@keyframes ooInL{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@keyframes ooInR{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes ooInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes ooPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes ooIcon{0%{transform:translateY(0)}35%{transform:translateY(-3px) scale(1.12)}100%{transform:none}}
+@keyframes ooSheen{from{transform:translateX(-120%) skewX(-18deg)}to{transform:translateX(220%) skewX(-18deg)}}
+main#view.oo-l>*{animation:ooInL .42s var(--oo-ease) both}
+main#view.oo-r>*{animation:ooInR .42s var(--oo-ease) both}
+main#view.oo-u>*{animation:ooInUp .36s var(--oo-ease) both}
+main#view.oo-l>*:nth-child(2),main#view.oo-r>*:nth-child(2),main#view.oo-u>*:nth-child(2){animation-delay:.04s}
+main#view.oo-l>*:nth-child(3),main#view.oo-r>*:nth-child(3),main#view.oo-u>*:nth-child(3){animation-delay:.08s}
+main#view.oo-l>*:nth-child(4),main#view.oo-r>*:nth-child(4),main#view.oo-u>*:nth-child(4){animation-delay:.12s}
+main#view.oo-l>*:nth-child(n+5),main#view.oo-r>*:nth-child(n+5),main#view.oo-u>*:nth-child(n+5){animation-delay:.16s}
+/* Barre du bas : pastille et icône */
+.bnav button{transition:color .3s var(--oo-ease),transform .25s var(--oo-ease)}
+.bnav button:active{transform:scale(.92)}
+.bnav .bi{transition:background-color .35s var(--oo-ease)}
+.bnav button.oo-hit .bi{animation:ooPop .45s var(--oo-spring)}
+.bnav button.oo-hit svg{animation:ooIcon .5s var(--oo-ease)}
+/* Onglets du haut */
+.subnav button{transition:background-color .3s var(--oo-ease),color .3s var(--oo-ease),box-shadow .3s var(--oo-ease),transform .2s var(--oo-ease)}
+.subnav button:active{transform:scale(.95)}
+.subnav button[aria-selected="true"]{animation:ooPop .38s var(--oo-spring)}
+/* Boutons principaux : enfoncement marqué et reflet */
+.primary,.add,.btn-s.p,.dict,#pv-pdf{position:relative;overflow:hidden;transition:transform .22s var(--oo-spring),box-shadow .25s var(--oo-ease),filter .25s}
+.primary:active,.add:active,.btn-s.p:active,#pv-pdf:active{transform:scale(.95);filter:brightness(1.06)}
+.dict:active{transform:scale(.985)}
+.primary::after,.add::after,.btn-s.p::after,.dict::after{content:"";position:absolute;top:0;bottom:0;left:0;width:45%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.28),rgba(255,255,255,0));transform:translateX(-120%) skewX(-18deg);pointer-events:none}
+.primary.oo-hit::after,.add.oo-hit::after,.btn-s.p.oo-hit::after,.dict.oo-hit::after{animation:ooSheen .6s var(--oo-ease)}
+/* Boutons secondaires : enfoncement léger */
+.ghost,.btn-s,.chip,.danger,.close,.fs{transition:transform .18s var(--oo-ease),background-color .25s,border-color .25s,color .25s}
+.ghost:active,.btn-s:active,.chip:active,.danger:active,.close:active,.fs:active{transform:scale(.97)}
+.chip[aria-pressed="true"]{animation:ooPop .32s var(--oo-spring)}
+/* Cartes et lignes cliquables */
+.item,.alert,.mt,.fcard,.exp,.xp,.ev,.act{transition:transform .2s var(--oo-ease),box-shadow .25s var(--oo-ease),background-color .2s}
+button.item:active,.alert:active,.mt:active,.fcard:active,.exp:active,.xp:active,button.ev:active{transform:scale(.985)}
+/* Bandeau de confirmation */
+#toast:not([hidden]){animation:ooInUp .3s var(--oo-ease)}
+@media (prefers-reduced-motion:reduce){main#view>*,.bnav *,.subnav *,.chip,#toast,.primary::after,.add::after,.btn-s.p::after,.dict::after{animation:none!important}}
+</style>
+<script>
+(function () {
+  document.addEventListener("touchstart", function () {}, { passive: true });
+  var hubIdx = function (v) { try { return HUBS.findIndex(function (h) { return h.v.indexOf(v) >= 0; }); } catch (e) { return 0; } };
+  var subIdx = function (v) { try { var h = HUBS[hubIdx(v)]; return h ? h.v.indexOf(v) : 0; } catch (e) { return 0; } };
+  var timer;
+  function play(cls) {
+    var m = document.getElementById("view");
+    if (!m || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    m.classList.remove("oo-l", "oo-r", "oo-u");
+    void m.offsetWidth;
+    m.classList.add(cls);
+    clearTimeout(timer);
+    timer = setTimeout(function () { m.classList.remove(cls); }, 650);
+  }
+  if (typeof setView === "function") {
+    var orig = setView;
+    setView = function (v) {
+      var prev = state.view;
+      var r = orig.apply(this, arguments);
+      var now = state.view;
+      if (prev && now !== prev) {
+        var a = hubIdx(prev), b = hubIdx(now);
+        if (a !== b) play(b > a ? "oo-r" : "oo-l");
+        else play(subIdx(now) > subIdx(prev) ? "oo-r" : subIdx(now) < subIdx(prev) ? "oo-l" : "oo-u");
+      }
+      return r;
+    };
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest(".bnav button,.primary,.add,.btn-s.p,.dict");
+    if (!b) return;
+    b.classList.remove("oo-hit");
+    void b.offsetWidth;
+    b.classList.add("oo-hit");
+    setTimeout(function () { b.classList.remove("oo-hit"); }, 650);
+  }, true);
+})();
+</script>
 </body>
 </html>
