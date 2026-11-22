@@ -337,7 +337,7 @@ label.bad input,label.bad select,label.bad textarea{border-color:var(--bad);box-
 @media(min-width:720px){.mt.lead{grid-column:span 2}}
 @media(max-width:430px){#brand-btn em{display:none}.top .bar{gap:8px}.add{padding:8px 13px}}
 .bnav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bar);border-top:1px solid rgba(220,198,168,.2);padding-bottom:env(safe-area-inset-bottom,0px)}
-.bnav .in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));max-width:620px;margin:0 auto}
+.bnav .in{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));max-width:620px;margin:0 auto}
 .bnav button{background:none;border:0;color:#D4CBC9;display:grid;justify-items:center;gap:3px;padding:9px 4px 8px;font-size:11px;font-weight:500;min-width:0}
 .bnav button[aria-current="page"]{color:#DCC6A8}
 .bnav button[aria-current="page"] .bi{background:rgba(220,198,168,.16)}
@@ -3459,7 +3459,8 @@ const HUBS = [
   { k: "jour", l: "Aujourd'hui", ic: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>', v: ["aujourdhui", "agenda"] },
   { k: "personnes", l: "Personnes", ic: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.3 3.3 0 010 6.6M18.5 14.8c1.6.7 2.6 2.4 3 5.2"/>', v: ["prospection", "rdv", "clients", "carnet"] },
   { k: "ventes", l: "Ventes", ic: '<path d="M14 2.5H6.5A2 2 0 004.5 4.5v15a2 2 0 002 2h11a2 2 0 002-2V8z"/><path d="M14 2.5V8h5.5M8.5 13h7M8.5 17h4.5"/>', v: ["devis", "prestations", "tarifs"] },
-  { k: "argent", l: "Argent", ic: '<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4a4.3 4.3 0 100 7.2M7.2 10.6h6.3M7.2 13.4h6.3"/>', v: ["accueil", "chiffres", "compta", "depenses"] }
+  { k: "argent", l: "Argent", ic: '<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4a4.3 4.3 0 100 7.2M7.2 10.6h6.3M7.2 13.4h6.3"/>', v: ["accueil", "chiffres", "compta", "depenses"] },
+  { k: "contenu", l: "Contenu", ic: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/>', v: ["reels"] }
 ];
 const SUBL = { aujourdhui: "Actions", agenda: "Agenda", prospection: "Prospection", rdv: "RDV", clients: "Clients", carnet: "Carnet", devis: "Devis", prestations: "Prestas", tarifs: "Tarifs", accueil: "Bilan", chiffres: "Chiffres", compta: "Compta", depenses: "Dépenses" };
 const hubOf = (v) => HUBS.find((h) => h.v.includes(v)) || HUBS[0];
@@ -4622,8 +4623,6 @@ function reelsBindToday(v) {
 });
 const MENU_GROUPS = [["Ta journée", ["accueil", "agenda", "rdv"]], ["Commercial", ["prospection", "clients", "carnet", "devis"]], ["Activité et gestion", ["prestations", "tarifs", "depenses", "compta"]]];
 const MENU_LABEL = { accueil: "Tableau de bord" };
-MENU_GROUPS.push(["Communication", ["reels"]]);
-MENU_LABEL.reels = "Contenu et Reels";
 function menuHint(k) {
   const t = iso(), y = t.slice(0, 4);
   try {
