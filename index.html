@@ -601,7 +601,7 @@ function setView(v) {
   document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-current", b.dataset.v === v ? "page" : "false"));
   (_a = document.querySelector('.tab[data-v="'.concat(v, '"]'))) == null ? void 0 : _a.scrollIntoView({ block: "nearest", inline: "nearest" });
   $("#menu-btn").hidden = true;
-  const labels = { menu: "Nouvelle presta", prospection: "Nouveau RDV", carnet: "Nouveau contact", rdv: "Nouveau RDV", devis: "Nouveau devis", accueil: "Nouvelle presta", prestations: "Nouvelle presta", clients: "Nouveau client", tarifs: "Nouvelle formule", agenda: "Nouvelle tâche", depenses: "Nouvelle dépense", compta: "Nouvelle presta", arr: "Nouveau contrat", apporteurs: "Nouvel apport" };
+  const labels = { menu: "Nouvelle presta", prospection: "Nouveau RDV", carnet: "Nouveau contact", rdv: "Nouveau RDV", devis: "Nouveau devis", accueil: "Nouvelle presta", prestations: "Nouvelle presta", clients: "Nouveau client", tarifs: "Nouvelle formule", agenda: "Nouvelle tâche", depenses: "Nouvelle dépense", compta: "Nouvelle presta", arr: "Nouveau contrat", apporteurs: "Nouvel apport", reels: "Nouveau Reel" };
   $("#add-btn").textContent = labels[v] || "Nouvelle presta";
   closeSheet();
   render();
@@ -617,7 +617,7 @@ window.addEventListener("hashchange", () => {
 });
 $("#add-btn").addEventListener("click", () => {
   if (!ready) return;
-  ({ prospection: () => rdvForm(), carnet: () => contactForm(), rdv: () => rdvForm(), devis: () => devisEditor(), clients: () => clientForm(), tarifs: () => formuleForm(), agenda: () => tacheForm(), depenses: () => depenseForm(), arr: () => contratForm(), apporteurs: () => apportForm() }[state.view] || (() => prestaForm()))();
+  ({ prospection: () => rdvForm(), carnet: () => contactForm(), rdv: () => rdvForm(), devis: () => devisEditor(), clients: () => clientForm(), tarifs: () => formuleForm(), agenda: () => tacheForm(), depenses: () => depenseForm(), arr: () => contratForm(), apporteurs: () => apportForm(), reels: () => reelForm() }[state.view] || (() => prestaForm()))();
 });
 function render() {
   const v = $("#view");
@@ -629,7 +629,7 @@ function render() {
   const a = document.activeElement, keep = {};
   v.querySelectorAll("[data-keep]").forEach((el) => keep[el.id] = el.value);
   const focusId = a && v.contains(a) && a.id ? a.id : null, selS = a && a.selectionStart, selE = a && a.selectionEnd;
-  ({ aujourdhui: renderToday, chiffres: renderChiffres, menu: renderMenu, prospection: renderProspection, carnet: renderContacts, rdv: renderRdv, devis: renderDevisList, accueil: renderDash, agenda: renderAgenda, clients: renderClients, prestations: renderPrestas, depenses: renderDepenses, tarifs: renderTarifs, compta: renderCompta, arr: renderArr, apporteurs: renderApporteurs })[state.view](v);
+  ({ aujourdhui: renderToday, chiffres: renderChiffres, menu: renderMenu, prospection: renderProspection, carnet: renderContacts, rdv: renderRdv, devis: renderDevisList, accueil: renderDash, agenda: renderAgenda, clients: renderClients, prestations: renderPrestas, depenses: renderDepenses, tarifs: renderTarifs, compta: renderCompta, arr: renderArr, apporteurs: renderApporteurs, reels: renderReels })[state.view](v);
   decorateHub(v);
   Object.entries(keep).forEach(([id, val]) => {
     const el = document.getElementById(id);
@@ -3547,9 +3547,10 @@ function renderToday(v) {
   const wk = state.rdv.filter((r) => r.statut === "Prévu" && r.date && r.date >= t && r.date <= addDays(t, 7)).length;
   const A = todayActions(), main = A.filter((a) => a.o <= 6), fid = A.filter((a) => a.o > 6);
   const card = (a, i) => '<div class="act ' + a.cls + '"><span class="tg">' + esc(a.tag) + '</span><span class="tt">' + esc(a.t) + "</span>" + (a.s ? '<span class="ss">' + esc(a.s) + "</span>" : "") + '<div class="bt">' + a.btns.map((b) => '<button type="button" class="btn-s' + (b[3] ? " p" : "") + '" data-act="' + b[1] + '" data-id="' + esc(b[2]) + '">' + esc(b[0]) + "</button>").join("") + "</div></div>";
-  v.innerHTML = '<div><h1>Bonjour Bryan</h1><p class="sub" style="text-transform:capitalize">' + esc(fday(t)) + '</p></div><button class="dict" type="button" id="dict-btn"><span class="di"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg></span><span><b>Note rapide</b><small>Dicte ou tape ce qui vient de se passer, ton agent la range demain matin</small></span></button><div class="kpis"><div class="kpi lead"><div class="l">Encaissé ce mois</div><div class="v">' + eur(enc) + '</div></div><div class="kpi"><div class="l">À encaisser</div><div class="v">' + eur(due) + '</div></div><div class="kpi"><div class="l">RDV sur 7 jours</div><div class="v">' + wk + '</div></div><div class="kpi"><div class="l">À faire</div><div class="v">' + main.length + "</div></div></div>" + (main.length ? "<section><h2>À faire maintenant · " + main.length + '</h2><div class="acts">' + main.map(card).join("") + "</div></section>" : '<div class="empty"><p class="q">Tout est à jour</p><p>Rien d\'urgent : c\'est le moment de prospecter ou de préparer tes prochaines expériences.</p></div>') + (fid.length ? "<section><h2>Faire revenir tes clients · " + fid.length + '</h2><div class="acts">' + fid.map(card).join("") + "</div></section>" : "") + (nt.status !== "ok" ? '<p class="hint">Les brouillons de ton agent apparaîtront ici dès que la prospection est chargée.</p>' : "");
+  v.innerHTML = '<div><h1>Bonjour Bryan</h1><p class="sub" style="text-transform:capitalize">' + esc(fday(t)) + '</p></div><button class="dict" type="button" id="dict-btn"><span class="di"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg></span><span><b>Note rapide</b><small>Dicte ou tape ce qui vient de se passer, ton agent la range demain matin</small></span></button>' + reelsTodayBanner() + '<div class="kpis"><div class="kpi lead"><div class="l">Encaissé ce mois</div><div class="v">' + eur(enc) + '</div></div><div class="kpi"><div class="l">À encaisser</div><div class="v">' + eur(due) + '</div></div><div class="kpi"><div class="l">RDV sur 7 jours</div><div class="v">' + wk + '</div></div><div class="kpi"><div class="l">À faire</div><div class="v">' + main.length + "</div></div></div>" + (main.length ? "<section><h2>À faire maintenant · " + main.length + '</h2><div class="acts">' + main.map(card).join("") + "</div></section>" : '<div class="empty"><p class="q">Tout est à jour</p><p>Rien d\'urgent : c\'est le moment de prospecter ou de préparer tes prochaines expériences.</p></div>') + (fid.length ? "<section><h2>Faire revenir tes clients · " + fid.length + '</h2><div class="acts">' + fid.map(card).join("") + "</div></section>" : "") + (nt.status !== "ok" ? '<p class="hint">Les brouillons de ton agent apparaîtront ici dès que la prospection est chargée.</p>' : "");
   $("#dict-btn").addEventListener("click", () => noteSheet());
   v.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", (ev) => doAct(b.dataset.act, b.dataset.id, ev.currentTarget)));
+  reelsBindToday(v);
 }
 const ARM = ["paid", "taskdone", "reldone", "avisdone", "launchdone", "valid"];
 async function doAct(k, id, btn) {
@@ -4395,6 +4396,169 @@ doAct = async function (k, id, btn) {
   return _doActAp(k, id, btn);
 };
 
+
+// ===== Contenu : banque de Reels + rappel de publication par réseau =====
+VIEWS.push("reels");
+TABS.push(["reels", "Contenu", '<path d="M3 5.5A2.5 2.5 0 015.5 3h13A2.5 2.5 0 0121 5.5v13A2.5 2.5 0 0118.5 21h-13A2.5 2.5 0 013 18.5z"/><path d="M10 8.5l5 3.5-5 3.5z"/>']);
+SUBL.reels = "Contenu";
+MENU_GROUPS.push(["Communication", ["reels"]]);
+MENU_LABEL.reels = "Contenu et Reels";
+state.reels = [];
+state.loaded.reels = false;
+state.rfilter = "tout";
+state.rnet = "tout";
+
+const R_STATUTS = ["A faire", "Tourné", "Monté", "Publié"];
+const R_NETS = ["Instagram", "LinkedIn", "Facebook"];
+const R_ST_CLASS = { "A faire": "st-devis", "Tourné": "st-relance", "Monté": "st-ok", "Publié": "st-paid" };
+const R_PILIERS = ["Coulisses & expertise", "Preuve & valeur", "Art de vivre", "Offres & services", "Personnel & vision"];
+// Réglages du planning de publication (jours de la semaine par réseau). 1 = lundi … 7 = dimanche.
+const R_PLAN_DEF = { Instagram: [1, 3, 5], LinkedIn: [2, 4], Facebook: [3] };
+const R_DAYS = [["Lun", 1], ["Mar", 2], ["Mer", 3], ["Jeu", 4], ["Ven", 5], ["Sam", 6], ["Dim", 7]];
+
+function rPlan() {
+  const p = (state.reglages && state.reglages.reelsPlan) || R_PLAN_DEF;
+  return { Instagram: p.Instagram || [], LinkedIn: p.LinkedIn || [], Facebook: p.Facebook || [] };
+}
+// numéro de jour de semaine (1=lundi … 7=dimanche) d'une date ISO
+function isoDow(s) { const d = new Date(s + "T12:00:00"); return (d.getDay() + 6) % 7 + 1; }
+
+// Reels « prêts » (tournés ou montés, pas encore publiés) adaptés à un réseau, dans l'ordre
+function rQueueFor(net) {
+  return state.reels
+    .filter((r) => r.statut !== "Publié" && (r.reseaux || R_NETS).includes(net))
+    .sort((a, b) => (a.ordre || a.num || 0) - (b.ordre || b.num || 0));
+}
+// le prochain à publier pour un réseau : priorité à ce qui est déjà monté, sinon tourné, sinon à faire
+function rNextFor(net) {
+  const q = rQueueFor(net);
+  return q.find((r) => r.statut === "Monté") || q.find((r) => r.statut === "Tourné") || q[0] || null;
+}
+
+// Bandeau « À publier aujourd'hui », injecté en haut de la page Aujourd'hui
+function reelsTodayBanner() {
+  if (!state.loaded.reels) return "";
+  const t = iso(), dow = isoDow(t), plan = rPlan();
+  const today = R_NETS.filter((n) => (plan[n] || []).includes(dow));
+  if (!today.length) return "";
+  const items = today.map((net) => {
+    const r = rNextFor(net);
+    const ic = R_NET_IC[net] || "";
+    if (!r) return '<div class="rb-row rb-empty"><span class="rb-net">' + ic + net + '</span><span class="rb-txt">Rien de prêt à publier. <b data-goto="reels">Piocher un Reel</b></span></div>';
+    const prete = r.statut === "Monté";
+    return '<div class="rb-row"><span class="rb-net">' + ic + net + '</span>' +
+      '<span class="rb-txt"><b>' + esc(r.hook) + '</b><small>' + esc(r.pilier) + ' · ' + esc(r.angle) + (prete ? '' : ' · <em>' + esc(r.statut) + '</em>') + '</small></span>' +
+      '<button type="button" class="btn-s p" data-reelpub="' + esc(r.id) + '">Publié</button>' +
+      '<button type="button" class="btn-s" data-reelopen="' + esc(r.id) + '">Voir</button></div>';
+  }).join("");
+  return '<section class="reels-banner"><h2>À publier aujourd\'hui · ' + today.length + '</h2><div class="rb">' + items + '</div></section>';
+}
+const R_NET_IC = {
+  Instagram: '<svg class="ni" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none"/></svg>',
+  LinkedIn: '<svg class="ni" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 10v7M7 7v.01M11 17v-4a2 2 0 014 0v4" fill="none"/></svg>',
+  Facebook: '<svg class="ni" viewBox="0 0 24 24"><path d="M14 8.5h2.5M13 21v-8m0 0V9.5A2.5 2.5 0 0115.5 7H16M13 13h-2.5" fill="none"/><rect x="3" y="3" width="18" height="18" rx="5"/></svg>'
+};
+
+function renderReels(v) {
+  const flt = state.rfilter, net = state.rnet;
+  let list = state.reels.slice().sort((a, b) => (a.ordre || a.num || 0) - (b.ordre || b.num || 0));
+  if (net !== "tout") list = list.filter((r) => (r.reseaux || R_NETS).includes(net));
+  if (flt !== "tout") list = list.filter((r) => (r.statut || "A faire") === flt);
+  const count = (st) => state.reels.filter((r) => (r.statut || "A faire") === st).length;
+  const afaire = count("A faire"), publ = count("Publié");
+
+  const chip = (lbl, val, cur, key) => '<button type="button" class="chip" aria-pressed="' + (val === cur) + '" data-' + key + '="' + esc(val) + '">' + esc(lbl) + "</button>";
+  const netBar = '<div class="tools">' + chip("Tous réseaux", "tout", net, "rnet") + R_NETS.map((n) => chip(n, n, net, "rnet")).join("") + "</div>";
+  const stBar = '<div class="tools">' + chip("Tout", "tout", flt, "rflt") + R_STATUTS.map((s) => chip(s, s, flt, "rflt")).join("") + "</div>";
+
+  const row = (r) => {
+    const st = r.statut || "A faire";
+    const nets = (r.reseaux || R_NETS).map((n) => '<span class="rnet-tag">' + esc(n) + "</span>").join("");
+    return '<button type="button" class="item ritem" data-reel="' + esc(r.id) + '">' +
+      '<span class="t">' + esc(r.hook) + '</span>' +
+      '<span class="b"><span class="pill ' + (R_ST_CLASS[st] || "") + '">' + esc(st) + '</span></span>' +
+      '<span class="m">' + esc(r.pilier) + ' · ' + esc(r.angle) + '</span>' +
+      '<span class="b m">' + nets + (r.datePubliee ? ' <span class="rnet-tag">le ' + esc(fdate(r.datePubliee)) + '</span>' : '') + '</span></button>';
+  };
+
+  v.innerHTML = '<div><h1>Contenu</h1><p class="sub">' + afaire + ' à produire · ' + publ + ' publié' + (publ > 1 ? "s" : "") + ' · ' + state.reels.length + ' au total</p></div>' +
+    '<button class="dict" type="button" id="reel-plan-btn"><span class="di"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span><b>Planning de publication</b><small>Choisis les jours où tu publies sur chaque réseau. Le rappel apparaît sur ta page Aujourd\'hui.</small></span></button>' +
+    netBar + stBar +
+    (list.length ? '<section><div class="list">' + list.map(row).join("") + "</div></section>"
+      : '<div class="empty"><p class="q">Rien ici</p><p>Aucun Reel avec ce filtre. Change de filtre ou ajoute une idée avec le bouton +.</p></div>');
+
+  $("#reel-plan-btn").addEventListener("click", reelPlanSheet);
+  v.querySelectorAll("[data-rnet]").forEach((b) => b.addEventListener("click", () => { state.rnet = b.dataset.rnet; render(); }));
+  v.querySelectorAll("[data-rflt]").forEach((b) => b.addEventListener("click", () => { state.rfilter = b.dataset.rflt; render(); }));
+  v.querySelectorAll("[data-reel]").forEach((b) => b.addEventListener("click", () => reelForm(state.reels.find((x) => x.id === b.dataset.reel))));
+}
+
+function reelForm(r) {
+  r = r || {};
+  const nets = r.reseaux || R_NETS.slice();
+  const netChecks = R_NETS.map((n) => '<label class="check"><input type="checkbox" class="r-net" value="' + n + '" ' + (nets.includes(n) ? "checked" : "") + '> ' + n + "</label>").join("");
+  openSheet(head(r.id ? "Modifier le Reel" : "Nouveau Reel") +
+    '<form id="f-reel" novalidate>' +
+    '<label>Hook (3 premières secondes)<textarea id="r-hook" rows="2" required placeholder="La phrase qui arrête le scroll">' + esc(r.hook) + '</textarea></label>' +
+    '<div class="row2"><label>Pilier<select id="r-pil">' + opts(R_PILIERS, r.pilier || R_PILIERS[0]) + '</select></label>' +
+    '<label>Angle<input id="r-ang" value="' + esc(r.angle) + '" placeholder="Mythe à casser" autocomplete="off"></label></div>' +
+    '<label>Concept du Reel<textarea id="r-concept" rows="3" placeholder="Ce que tu filmes, comment">' + esc(r.concept) + '</textarea></label>' +
+    '<label>Call-to-action<textarea id="r-cta" rows="2" placeholder="Ce que tu demandes en fin de vidéo">' + esc(r.cta) + '</textarea></label>' +
+    '<label>Réseaux<div class="checks">' + netChecks + '</div></label>' +
+    '<div class="row2"><label>Statut<select id="r-stat">' + opts(R_STATUTS, r.statut || "A faire") + '</select></label>' +
+    '<label>Date publiée<input id="r-date" type="date" value="' + esc(r.datePubliee) + '"></label></div>' +
+    '<div class="actions">' + (r.id ? '<button class="danger" type="button" id="del-btn">Supprimer</button>' : "<span></span>") + '<button class="primary" type="submit">Enregistrer</button></div>' +
+    "</form>");
+  $("#r-hook").focus();
+  $("#f-reel").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const reseaux = Array.from(document.querySelectorAll(".r-net")).filter((c) => c.checked).map((c) => c.value);
+    const stat = $("#r-stat").value;
+    const data = {
+      hook: $("#r-hook").value.trim(), pilier: $("#r-pil").value, angle: $("#r-ang").value.trim(),
+      concept: $("#r-concept").value.trim(), cta: $("#r-cta").value.trim(),
+      reseaux: reseaux.length ? reseaux : R_NETS.slice(), format: r.format || "9:16 · 15-30s",
+      statut: stat, datePubliee: stat === "Publié" ? ($("#r-date").value || iso()) : $("#r-date").value,
+      num: r.num, ordre: r.ordre != null ? r.ordre : (r.num || state.reels.length + 1), creeLe: r.creeLe || iso()
+    };
+    if (!formCheck($("#f-reel"), [need(!!data.hook, "#r-hook", "le hook du Reel")])) return;
+    save("reels", r.id, data, r.id ? "Reel mis à jour" : "Reel ajouté");
+  });
+  if (r.id) bindDelete("reels", r.id, "Reel");
+}
+
+function reelPlanSheet() {
+  const plan = rPlan();
+  const block = (net) => '<fieldset class="rplan"><legend>' + esc(net) + '</legend><div class="rdays">' +
+    R_DAYS.map(([lbl, d]) => '<label class="rday"><input type="checkbox" data-plan="' + net + '" value="' + d + '" ' + ((plan[net] || []).includes(d) ? "checked" : "") + "><span>" + lbl + "</span></label>").join("") + "</div></fieldset>";
+  openSheet(head("Planning de publication") +
+    '<form id="f-rplan" novalidate><p class="hint" style="margin-top:0">Coche les jours où tu veux publier sur chaque réseau. Chaque matin, ta page Aujourd\'hui te proposera le prochain Reel à poster pour les réseaux du jour.</p>' +
+    R_NETS.map(block).join("") +
+    '<div class="actions"><span></span><button class="primary" type="submit">Enregistrer le planning</button></div></form>');
+  $("#f-rplan").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const np = { Instagram: [], LinkedIn: [], Facebook: [] };
+    document.querySelectorAll("[data-plan]").forEach((c) => { if (c.checked) np[c.dataset.plan].push(Number(c.value)); });
+    try {
+      await base.doc("reglages/main").set({ ...state.reglages, reelsPlan: np });
+      closeSheet(); toast("Planning enregistré");
+    } catch (err) { toast(errMsg(err)); }
+  });
+}
+
+// Actions du bandeau Aujourd'hui (marquer publié / ouvrir la fiche)
+function reelsBindToday(v) {
+  v.querySelectorAll("[data-reelpub]").forEach((b) => b.addEventListener("click", async () => {
+    const r = state.reels.find((x) => x.id === b.dataset.reelpub);
+    if (!r) return;
+    try { await base.collection("reels").doc(r.id).update({ statut: "Publié", datePubliee: iso() }); toast("Marqué publié, bravo"); }
+    catch (e) { toast(errMsg(e)); }
+  }));
+  v.querySelectorAll("[data-reelopen]").forEach((b) => b.addEventListener("click", () => reelForm(state.reels.find((x) => x.id === b.dataset.reelopen))));
+  v.querySelectorAll("[data-goto='reels']").forEach((b) => b.addEventListener("click", () => { location.hash = "reels"; }));
+}
+
+
 (async () => {
   const h = location.hash.slice(1);
   setView(VIEWS.includes(h) && h !== "menu" ? h : "aujourdhui");
@@ -4840,6 +5004,32 @@ document.addEventListener("touchend", function (e) { var n = Date.now(); if (n -
 </script>
 <style>#oo-prev .pv-scroll{justify-items:safe center}#oo-prev .pv-page{flex:none}</style>
 <style>body{min-height:100vh;min-height:100dvh}.cinfo a{color:var(--gold);text-decoration:none;font-weight:500}</style>
+<style>
+/* Contenu / Reels */
+.reels-banner{margin:14px 0}
+.rb{display:grid;gap:8px}
+.rb-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px 10px;align-items:center;background:var(--card,var(--surface));border:1px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:var(--lift-s)}
+.rb-row.rb-empty{grid-template-columns:auto minmax(0,1fr)}
+.rb-net{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:12px;white-space:nowrap}
+.rb-net .ni{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+.rb-txt{min-width:0;display:flex;flex-direction:column;gap:1px}
+.rb-txt b{font-size:14px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rb-txt small{font-size:11px;color:var(--muted,#8a7)}
+.rb-txt small em{font-style:normal;color:var(--warn)}
+.rb-empty .rb-txt b[data-goto]{color:var(--gold);cursor:pointer}
+.ritem{grid-template-columns:minmax(0,1fr) auto}
+.ritem .t{font-weight:600;line-height:1.3}
+.rnet-tag{display:inline-block;font-size:11px;color:var(--muted,#8a7);margin-right:6px}
+.checks{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:6px}
+.rplan{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:10px 0}
+.rplan legend{font-weight:600;font-size:13px;padding:0 6px}
+.rdays{display:flex;flex-wrap:wrap;gap:6px}
+.rday{display:flex}
+.rday input{position:absolute;opacity:0;width:0;height:0}
+.rday span{display:inline-block;min-width:40px;text-align:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--surface)}
+.rday input:checked+span{background:linear-gradient(145deg,#6B3647,#541C21);color:#F0EEEA;border-color:#541C21}
+</style>
+
 <style>
 /* Animations : transitions de pages et retour tactile des boutons */
 :root{--oo-ease:cubic-bezier(.22,.8,.24,1);--oo-spring:cubic-bezier(.34,1.56,.64,1)}

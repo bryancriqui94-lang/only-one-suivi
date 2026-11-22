@@ -1,5 +1,6 @@
 -- Only One Suivi : base de données Supabase
--- Une seule table « docs » qui reprend les collections de l'appli (clients, prestas, prospects_communes…)
+-- Une seule table « docs » qui reprend les collections de l'appli (clients, prestas, prospects_communes, reels…)
+-- La collection « reels » (banque de contenus et planning de publication) utilise la même table, sans migration.
 
 create table if not exists public.docs (
   col text not null,
