@@ -26,17 +26,21 @@ html,body{margin:0;padding:0}
 #oo-login button[type=submit]{font:inherit;font-weight:600;padding:13px;border:0;border-radius:999px;background:linear-gradient(180deg,#DCC6A8,#C4A584 60%,#B39470);color:#3A1220;cursor:pointer}
 #oo-login .oo-link{background:none;border:0;color:#DCC6A8;font:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
 #oo-login #oo-msg{margin:0;min-height:1.2em;font-size:13px;color:#F0EEEA;text-align:center}
+
+.gc-prev{margin:0 0 12px;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(58,17,23,.28);aspect-ratio:1800/1134;background:#3A1117}
+.gc-prev img{display:block;width:100%;height:100%;object-fit:cover}
+.gc-chips{margin:6px 0 8px}
 </style>
-<script src="config.js?v=2211-1302"></script>
+<script src="config.js?v=2611-1630"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script>window.OO_VERSION="2211-1302"</script><script src="shim.js?v=2211-1302"></script>
+<script>window.OO_VERSION="2611-1630"</script><script src="shim.js?v=2611-1630"></script>
 </head>
 <body>
 <title>Only One Suivi</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:ital,wght@1,500;1,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:ital,wght@0,500;1,500;1,600&display=swap">
 <style>
 /* Layout: one column console; dark brand bar with scrollable section tabs on top; forms replace the view in place */
 :root{
@@ -601,7 +605,7 @@ function setView(v) {
   document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-current", b.dataset.v === v ? "page" : "false"));
   (_a = document.querySelector('.tab[data-v="'.concat(v, '"]'))) == null ? void 0 : _a.scrollIntoView({ block: "nearest", inline: "nearest" });
   $("#menu-btn").hidden = true;
-  const labels = { menu: "Nouvelle presta", prospection: "Nouveau RDV", carnet: "Nouveau contact", rdv: "Nouveau RDV", devis: "Nouveau devis", accueil: "Nouvelle presta", prestations: "Nouvelle presta", clients: "Nouveau client", tarifs: "Nouvelle formule", agenda: "Nouvelle tâche", depenses: "Nouvelle dépense", compta: "Nouvelle presta", arr: "Nouveau contrat", apporteurs: "Nouvel apport", reels: "Nouveau Reel" };
+  const labels = { menu: "Nouvelle presta", prospection: "Nouveau RDV", carnet: "Nouveau contact", rdv: "Nouveau RDV", devis: "Nouveau devis", accueil: "Nouvelle presta", prestations: "Nouvelle presta", clients: "Nouveau client", tarifs: "Nouvelle formule", agenda: "Nouvelle tâche", depenses: "Nouvelle dépense", compta: "Nouvelle presta", arr: "Nouveau contrat", apporteurs: "Nouvel apport", reels: "Nouveau Reel", cartes: "Nouvelle carte" };
   $("#add-btn").textContent = labels[v] || "Nouvelle presta";
   closeSheet();
   render();
@@ -617,7 +621,7 @@ window.addEventListener("hashchange", () => {
 });
 $("#add-btn").addEventListener("click", () => {
   if (!ready) return;
-  ({ prospection: () => rdvForm(), carnet: () => contactForm(), rdv: () => rdvForm(), devis: () => devisEditor(), clients: () => clientForm(), tarifs: () => formuleForm(), agenda: () => tacheForm(), depenses: () => depenseForm(), arr: () => contratForm(), apporteurs: () => apportForm(), reels: () => reelForm() }[state.view] || (() => prestaForm()))();
+  ({ prospection: () => rdvForm(), carnet: () => contactForm(), rdv: () => rdvForm(), devis: () => devisEditor(), clients: () => clientForm(), tarifs: () => formuleForm(), agenda: () => tacheForm(), depenses: () => depenseForm(), arr: () => contratForm(), apporteurs: () => apportForm(), reels: () => reelForm(), cartes: () => carteForm() }[state.view] || (() => prestaForm()))();
 });
 function render() {
   const v = $("#view");
@@ -629,7 +633,7 @@ function render() {
   const a = document.activeElement, keep = {};
   v.querySelectorAll("[data-keep]").forEach((el) => keep[el.id] = el.value);
   const focusId = a && v.contains(a) && a.id ? a.id : null, selS = a && a.selectionStart, selE = a && a.selectionEnd;
-  ({ aujourdhui: renderToday, chiffres: renderChiffres, menu: renderMenu, prospection: renderProspection, carnet: renderContacts, rdv: renderRdv, devis: renderDevisList, accueil: renderDash, agenda: renderAgenda, clients: renderClients, prestations: renderPrestas, depenses: renderDepenses, tarifs: renderTarifs, compta: renderCompta, arr: renderArr, apporteurs: renderApporteurs, reels: renderReels })[state.view](v);
+  ({ aujourdhui: renderToday, chiffres: renderChiffres, menu: renderMenu, prospection: renderProspection, carnet: renderContacts, rdv: renderRdv, devis: renderDevisList, accueil: renderDash, agenda: renderAgenda, clients: renderClients, prestations: renderPrestas, depenses: renderDepenses, tarifs: renderTarifs, compta: renderCompta, arr: renderArr, apporteurs: renderApporteurs, reels: renderReels, cartes: renderCartes })[state.view](v);
   decorateHub(v);
   Object.entries(keep).forEach(([id, val]) => {
     const el = document.getElementById(id);
@@ -4786,6 +4790,419 @@ function reelsBindToday(v) {
   }));
   v.querySelectorAll("[data-reelopen]").forEach((b) => b.addEventListener("click", () => reelForm(state.reels.find((x) => x.id === b.dataset.reelopen))));
   v.querySelectorAll("[data-goto='reels']").forEach((b) => b.addEventListener("click", () => { location.hash = "reels"; }));
+}
+
+
+// ===== Carte cadeau Only One · Édition Noël (dessin canvas 1800x1134) =====
+const KC = { burg: "#5E1D24", light: "#7D2A31", shade: "#3A1117", anth: "#23201E", stone: "#D9C5B1", ivory: "#F4ECDF", g1: "#BA9545", g2: "#E0C68E" };
+const GC_FONTS = ["600 34px Poppins", "500 20px Poppins", "600 96px Poppins", "italic 500 150px Lora", "italic 500 40px Lora", "500 40px Lora"];
+async function gcFontsReady() {
+  try { await Promise.all(GC_FONTS.map((f) => document.fonts.load(f))); await document.fonts.ready; } catch (e) {}
+}
+function gcRand(seed) {
+  let s = (seed >>> 0) || 1;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+function gcGold(ctx, x0, y0, x1, y1) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, "#A9843A"); g.addColorStop(0.3, "#E0C68E"); g.addColorStop(0.5, "#F6E7BE");
+  g.addColorStop(0.7, "#C9A458"); g.addColorStop(1, "#BA9545");
+  return g;
+}
+function gcSpaced(ctx, text, x, y, sp, align) {
+  ctx.save();
+  try { ctx.letterSpacing = sp + "px"; } catch (e) {}
+  let w = ctx.measureText(text).width;
+  let sx = align === "right" ? x - w + sp : align === "center" ? x - (w - sp) / 2 : x;
+  ctx.textAlign = "left";
+  ctx.fillText(text, sx, y);
+  ctx.restore();
+  return w;
+}
+function gcFlake(ctx, x, y, r, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0);
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(Math.PI / 3);
+    ctx.moveTo(0, 0); ctx.lineTo(0, -r);
+    [[0.42, 0.3], [0.68, 0.22]].forEach(([p, l]) => {
+      ctx.moveTo(0, -r * p); ctx.lineTo(-r * l * 0.8, -r * (p + l * 0.65));
+      ctx.moveTo(0, -r * p); ctx.lineTo(r * l * 0.8, -r * (p + l * 0.65));
+    });
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+function gcSparkle(ctx, x, y, r) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.shadowColor = "rgba(246,231,190,.9)"; ctx.shadowBlur = r * 1.6;
+  ctx.fillStyle = "#F6E7BE";
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.quadraticCurveTo(r * 0.12, -r * 0.12, r, 0);
+  ctx.quadraticCurveTo(r * 0.12, r * 0.12, 0, r);
+  ctx.quadraticCurveTo(-r * 0.12, r * 0.12, -r, 0);
+  ctx.quadraticCurveTo(-r * 0.12, -r * 0.12, 0, -r);
+  ctx.fill();
+  ctx.restore();
+}
+// branche de sapin stylisée au trait or
+function gcSprig(ctx, x, y, len, ang, bend, rnd) {
+  const ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len;
+  const nx = -Math.sin(ang), ny = Math.cos(ang);
+  const cx = (x + ex) / 2 + nx * bend, cy = (y + ey) / 2 + ny * bend;
+  const pt = (t) => [(1 - t) * (1 - t) * x + 2 * (1 - t) * t * cx + t * t * ex, (1 - t) * (1 - t) * y + 2 * (1 - t) * t * cy + t * t * ey];
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
+  ctx.beginPath();
+  const n = Math.round(len / 9);
+  for (let i = 2; i <= n; i++) {
+    const t = i / n, [px, py] = pt(t), [qx, qy] = pt(Math.max(0, t - 0.01));
+    const da = Math.atan2(py - qy, px - qx);
+    const L = (1 - t * 0.55) * len * 0.17 * (0.85 + rnd() * 0.3);
+    [-1, 1].forEach((s) => {
+      const a = da + s * (0.95 + rnd() * 0.12);
+      ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(a) * L, py + Math.sin(a) * L);
+    });
+  }
+  ctx.stroke();
+}
+function gcBauble(ctx, x, top, len, r) {
+  const cy = top + len;
+  ctx.save();
+  ctx.strokeStyle = "rgba(224,198,142,.75)"; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, cy - r - 10); ctx.stroke();
+  // attache
+  ctx.fillStyle = gcGold(ctx, x - 9, 0, x + 9, 0);
+  ctx.fillRect(x - 8, cy - r - 12, 16, 12);
+  // boule
+  ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 22; ctx.shadowOffsetY = 8;
+  const g = ctx.createRadialGradient(x - r * 0.4, cy - r * 0.45, r * 0.08, x, cy, r * 1.05);
+  g.addColorStop(0, "#F6E7BE"); g.addColorStop(0.35, "#D2B06A"); g.addColorStop(0.8, "#9C7A33"); g.addColorStop(1, "#6E5422");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowColor = "transparent";
+  // bandeau bordeaux fin
+  ctx.save(); ctx.beginPath(); ctx.arc(x, cy, r, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = "rgba(94,29,36,.55)";
+  ctx.beginPath(); ctx.ellipse(x, cy, r * 1.05, r * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(246,231,190,.7)"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.ellipse(x, cy - r * 0.16, r * 1.05, r * 0.05, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, cy + r * 0.16, r * 1.05, r * 0.05, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  // reflet
+  ctx.fillStyle = "rgba(255,255,255,.35)";
+  ctx.beginPath(); ctx.ellipse(x - r * 0.38, cy - r * 0.42, r * 0.22, r * 0.12, -0.7, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function gcDiamond(ctx, x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-s / 2, -s / 2, s, s); ctx.restore();
+}
+function gcDots(ctx, x0, x1, y) {
+  ctx.save(); ctx.fillStyle = "rgba(224,198,142,.55)";
+  for (let x = x0; x <= x1; x += 9) { ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+function gcFit(ctx, text, font, size, maxW, min) {
+  let s = size;
+  do { ctx.font = font.replace("{s}", s); if (ctx.measureText(text).width <= maxW) break; s -= 2; } while (s > min);
+  return s;
+}
+const gcDate = (s) => { if (!s) return ""; const p = String(s).split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : s; };
+const gcEur = (n) => (Number(n) || 0).toLocaleString("fr-FR", { maximumFractionDigits: 0 }).replace(/ | /g, " ") + " €";
+const gcNum = (c) => c && c.num ? "N° " + (c.annee || "") + " · " + String(c.num).padStart(3, "0") : "";
+
+// c = { prenom, nom, entreprise, offertPar, montant, validite, num, annee } ; vide = carte neutre
+function drawGiftCard(c) {
+  c = c || {};
+  const W = 1800, H = 1134, P = 130;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  const rnd = gcRand(20261225);
+
+  // fond bordeaux en relief
+  ctx.fillStyle = KC.shade; ctx.fillRect(0, 0, W, H);
+  let g = ctx.createRadialGradient(W * 0.36, H * 0.4, 30, W * 0.42, H * 0.5, W * 0.78);
+  g.addColorStop(0, "#8C333B"); g.addColorStop(0.42, KC.burg); g.addColorStop(1, "#250A0E");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "rgba(255,255,255,.05)"); g.addColorStop(0.5, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.28)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  // grain
+  const tile = document.createElement("canvas"); tile.width = tile.height = 160;
+  const tc = tile.getContext("2d"), id = tc.createImageData(160, 160);
+  for (let i = 0; i < id.data.length; i += 4) { const v = rnd() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 14; }
+  tc.putImageData(id, 0, 0);
+  ctx.fillStyle = ctx.createPattern(tile, "repeat"); ctx.fillRect(0, 0, W, H);
+
+  // bokeh doré
+  ctx.save(); ctx.globalCompositeOperation = "screen";
+  for (let i = 0; i < 46; i++) {
+    const x = W * (0.42 + rnd() * 0.6), y = H * (rnd() * 0.75), r = 6 + rnd() * 46, a = 0.04 + rnd() * 0.13;
+    const bg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    bg.addColorStop(0, "rgba(246,231,190," + a + ")"); bg.addColorStop(0.7, "rgba(224,198,142," + a * 0.6 + ")"); bg.addColorStop(1, "rgba(224,198,142,0)");
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = W * rnd() * 0.45, y = H * (0.05 + rnd() * 0.9), r = 4 + rnd() * 18, a = 0.03 + rnd() * 0.06;
+    ctx.fillStyle = "rgba(224,198,142," + a + ")"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
+  // flocons
+  ctx.save(); ctx.lineCap = "round";
+  for (let i = 0; i < 30; i++) {
+    const x = W * (0.03 + rnd() * 0.95), y = H * (0.04 + rnd() * 0.92), r = 7 + rnd() * 20;
+    if (x > P - 40 && x < W * 0.66 && y > 300 && y < H - 150) continue; // garde le texte lisible
+    if (x > W - P - 540 && y > 620 && y < 910) continue; // et l'encart valeur
+    ctx.strokeStyle = "rgba(224,198,142," + (0.18 + rnd() * 0.32) + ")"; ctx.lineWidth = r > 18 ? 1.8 : 1.3;
+    gcFlake(ctx, x, y, r, rnd());
+  }
+  ctx.restore();
+
+  // cadre double
+  ctx.strokeStyle = gcGold(ctx, 0, 0, W, H); ctx.lineWidth = 2.5;
+  ctx.strokeRect(42, 42, W - 84, H - 84);
+  ctx.strokeStyle = "rgba(224,198,142,.4)"; ctx.lineWidth = 1;
+  ctx.strokeRect(58, 58, W - 116, H - 116);
+  ctx.fillStyle = gcGold(ctx, 0, 0, W, H);
+  [[42, 42], [W - 42, 42], [42, H - 42], [W - 42, H - 42]].forEach(([x, y]) => gcDiamond(ctx, x, y, 14));
+
+  // guirlande de sapin, coin haut droit
+  ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = "rgba(224,198,142,.78)"; ctx.lineWidth = 1.7;
+  const ox = W - 58, oy = 58;
+  gcSprig(ctx, ox, oy, 560, Math.PI * 0.985, 40, rnd);
+  gcSprig(ctx, ox, oy, 430, Math.PI * 0.86, 30, rnd);
+  gcSprig(ctx, ox, oy, 330, Math.PI * 0.68, -24, rnd);
+  ctx.strokeStyle = "rgba(224,198,142,.5)"; ctx.lineWidth = 1.3;
+  gcSprig(ctx, ox, oy, 300, Math.PI * 0.93, -30, rnd);
+  gcSprig(ctx, ox, oy, 250, Math.PI * 0.55, 18, rnd);
+  ctx.restore();
+  // petites baies dorées
+  [[W - 330, 108, 7], [W - 352, 124, 5], [W - 312, 128, 6], [W - 520, 92, 5], [W - 205, 175, 6], [W - 186, 190, 4.5]].forEach(([x, y, r]) => {
+    const bg = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+    bg.addColorStop(0, "#F6E7BE"); bg.addColorStop(1, "#A9843A");
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  });
+  // boules suspendues
+  gcBauble(ctx, W - 470, 96, 200, 34);
+  gcBauble(ctx, W - 370, 120, 290, 46);
+  gcBauble(ctx, W - 262, 150, 150, 28);
+  // branche plus discrète, coin bas gauche
+  ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = "rgba(224,198,142,.32)"; ctx.lineWidth = 1.3;
+  gcSprig(ctx, 58, H - 58, 250, -Math.PI * 0.45, 14, rnd);
+  gcSprig(ctx, 58, H - 58, 170, -Math.PI * 0.37, -12, rnd);
+  ctx.restore();
+  // étincelles
+  [[W - 600, 300, 13], [W - 180, 360, 10], [W - 700, 150, 8], [W * 0.56, 250, 9], [W - 120, 560, 7], [P + 860, 420, 11]].forEach(([x, y, r]) => gcSparkle(ctx, x, y, r));
+
+  // marque
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = gcGold(ctx, P, 0, P + 300, 0);
+  ctx.font = "600 34px Poppins, sans-serif";
+  gcSpaced(ctx, "ONLY ONE", P, 170, 12);
+  ctx.fillStyle = "rgba(217,197,177,.75)"; ctx.font = "500 18px Poppins, sans-serif";
+  gcSpaced(ctx, "CONCIERGERIE PRIVÉE", P, 206, 6);
+
+  // titre
+  ctx.fillStyle = gcGold(ctx, P, 0, P + 400, 0); ctx.font = "500 24px Poppins, sans-serif";
+  gcSpaced(ctx, "CARTE CADEAU", P, 352, 10);
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+  ctx.fillStyle = gcGold(ctx, P, 380, P + 760, 520);
+  ctx.font = "italic 500 156px Lora, serif"; ctx.textAlign = "left";
+  ctx.fillText("Joyeux Noël", P - 6, 500);
+  ctx.restore();
+  // filet or + losange
+  ctx.strokeStyle = gcGold(ctx, P, 0, P + 340, 0); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(P, 552); ctx.lineTo(P + 150, 552); ctx.moveTo(P + 190, 552); ctx.lineTo(P + 340, 552); ctx.stroke();
+  ctx.fillStyle = "#E0C68E"; gcDiamond(ctx, P + 170, 552, 11);
+  ctx.fillStyle = "rgba(244,236,223,.82)"; ctx.font = "italic 500 36px Lora, serif";
+  ctx.fillText("Une parenthèse sur mesure, à vivre quand vous le souhaitez.", P, 618);
+
+  // champs
+  const field = (x, label, val, sub, maxW) => {
+    ctx.fillStyle = "rgba(217,197,177,.72)"; ctx.font = "500 19px Poppins, sans-serif";
+    gcSpaced(ctx, label, x, 760, 5);
+    if (val) {
+      const s = gcFit(ctx, val, "italic 500 {s}px Lora, serif", 50, maxW, 28);
+      ctx.fillStyle = KC.ivory; ctx.font = "italic 500 " + s + "px Lora, serif"; ctx.textAlign = "left";
+      ctx.fillText(val, x, 826);
+      if (sub) {
+        ctx.fillStyle = "#E0C68E"; ctx.font = "500 19px Poppins, sans-serif";
+        let t = sub.toUpperCase(); while (t.length > 3 && ctx.measureText(t).width + t.length * 4 > maxW) t = t.slice(0, -2);
+        gcSpaced(ctx, t, x, 866, 4);
+      }
+    } else gcDots(ctx, x, x + maxW, 836);
+  };
+  const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ").trim();
+  const benef = nomComplet || c.entreprise || "";
+  field(P, "OFFERTE À", benef, nomComplet && c.entreprise ? c.entreprise : "", 560);
+  field(P + 640, "DE LA PART DE", c.offertPar || "", "", 400);
+
+  // encart valeur
+  const bx = W - P - 500, by = 650, bw = 500, bh = 230;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = "rgba(37,10,14,.55)";
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 22); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = gcGold(ctx, bx, by, bx + bw, by + bh); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 22); ctx.stroke();
+  ctx.strokeStyle = "rgba(224,198,142,.3)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(bx + 10, by + 10, bw - 20, bh - 20, 16); ctx.stroke();
+  ctx.fillStyle = "rgba(217,197,177,.75)"; ctx.font = "500 19px Poppins, sans-serif";
+  gcSpaced(ctx, "VALEUR", bx + bw / 2, by + 62, 8, "center");
+  if (c.montant) {
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+    ctx.fillStyle = gcGold(ctx, bx, by + 90, bx + bw, by + 190);
+    const s = gcFit(ctx, gcEur(c.montant), "600 {s}px Poppins, sans-serif", 100, bw - 70, 50);
+    ctx.font = "600 " + s + "px Poppins, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(gcEur(c.montant), bx + bw / 2, by + 182);
+    ctx.restore();
+  } else {
+    gcDots(ctx, bx + 70, bx + bw - 130, by + 170);
+    ctx.fillStyle = "#E0C68E"; ctx.font = "600 64px Poppins, sans-serif"; ctx.textAlign = "left";
+    ctx.fillText("€", bx + bw - 105, by + 178);
+  }
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(244,236,223,.85)"; ctx.font = "italic 500 32px Lora, serif";
+  ctx.textAlign = "right"; ctx.fillText("Vivez. Je m'occupe du reste.", bx + bw, by + bh + 64); ctx.textAlign = "left";
+
+  // pied de carte
+  ctx.strokeStyle = "rgba(224,198,142,.28)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(P, H - 150); ctx.lineTo(W - P, H - 150); ctx.stroke();
+  ctx.fillStyle = "rgba(217,197,177,.78)"; ctx.font = "500 18px Poppins, sans-serif";
+  const left = c.num
+    ? gcNum(c) + (c.validite ? "     VALABLE JUSQU'AU " + gcDate(c.validite) : "")
+    : "N° ...............     VALABLE 12 MOIS À COMPTER DE LA DATE D'ÉMISSION";
+  gcSpaced(ctx, left, P, H - 104, 3);
+  gcSpaced(ctx, "ONLYONECONCIERGERIE.COM   ·   07 70 88 10 13", W - P, H - 104, 3, "right");
+  return cv;
+}
+
+// ===== Ventes : cartes cadeaux (édition Noël) =====
+VIEWS.push("cartes");
+HUBS.find((h) => h.k === "ventes").v.push("cartes");
+SUBL.cartes = "Cadeaux";
+state.cartes = [];
+state.loaded.cartes = false;
+state.cfilter = "tout";
+const C_STATUTS = ["À régler", "Payée", "Utilisée"];
+const C_ST_CLASS = { "À régler": "st-devis", "Payée": "st-paid", "Utilisée": "st-ok" };
+const C_MONTANTS = [50, 100, 150, 200, 250, 300, 500, 750, 1000, 1200];
+const C_MIN = 50, C_MAX = 1200;
+const cNom = (c) => [c.prenom, c.nom].filter(Boolean).join(" ").trim() || c.entreprise || "Sans nom";
+const cStatut = (c) => c.statut === "Utilisée" ? "Utilisée" : c.validite && c.validite < iso() ? "Expirée" : c.statut || "À régler";
+function cNextNum() {
+  const y = Number(iso().slice(0, 4));
+  return { annee: y, num: 1 + Math.max(0, ...state.cartes.filter((c) => Number(c.annee) === y).map((c) => Number(c.num) || 0)) };
+}
+async function cSavePng(cv, name) {
+  let dl = null;
+  try { dl = await window.claude.use("downloads"); } catch (e) {}
+  if (!dl) { toast("Le téléchargement n'est pas disponible ici"); return; }
+  try {
+    const blob = await new Promise((res) => cv.toBlob(res, "image/png"));
+    await dl.save({ filename: name + ".png", data: blob });
+    toast("Carte enregistrée");
+  } catch (e) { if (!(e && e.code === "declined")) toast("La carte n'a pas pu être enregistrée"); }
+}
+const cFile = (c) => "OnlyOne_CarteCadeau_" + (c.num ? c.annee + "_" + String(c.num).padStart(3, "0") + "_" : "") + cNom(c).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "_").slice(0, 40);
+
+function renderCartes(v) {
+  const flt = state.cfilter;
+  let list = state.cartes.slice().sort((a, b) => (Number(b.annee) - Number(a.annee)) || (Number(b.num) - Number(a.num)));
+  if (flt !== "tout") list = list.filter((c) => cStatut(c) === flt);
+  const actives = state.cartes.filter((c) => ["À régler", "Payée"].includes(cStatut(c)));
+  const vendu = state.cartes.filter((c) => c.statut === "Payée" || c.statut === "Utilisée").reduce((s, c) => s + N(c.montant), 0);
+  const aRegler = state.cartes.filter((c) => cStatut(c) === "À régler").reduce((s, c) => s + N(c.montant), 0);
+  const chip = (lbl, val) => '<button type="button" class="chip" aria-pressed="' + (val === flt) + '" data-cflt="' + esc(val) + '">' + esc(lbl) + "</button>";
+  const row = (c) => {
+    const st = cStatut(c);
+    return '<button type="button" class="item" data-carte="' + esc(c.id) + '">' +
+      '<span class="t">' + esc(cNom(c)) + "</span>" +
+      '<span class="a">' + eur(c.montant) + "</span>" +
+      '<span class="m">' + esc(gcNum(c)) + (c.prenom || c.nom ? (c.entreprise ? " · " + esc(c.entreprise) : "") : "") + (c.validite ? " · jusqu'au " + esc(fdate(c.validite)) : "") + "</span>" +
+      '<span class="b"><span class="pill ' + (C_ST_CLASS[st] || "st-lost") + '">' + esc(st) + "</span></span></button>";
+  };
+  v.innerHTML = '<div class="head"><div><h1>Cartes cadeaux</h1><p class="sub">Édition Noël, pour particuliers et entreprises, de 50 € à 1 200 €.</p></div></div>' +
+    '<section class="kpis"><div class="kpi lead"><div class="l">Encaissé</div><div class="v">' + eur(vendu) + '</div><div class="s">' + plural(state.cartes.filter((c) => c.statut === "Payée" || c.statut === "Utilisée").length, "carte") + ' réglée' + '</div></div>' +
+    '<div class="kpi"><div class="l">À régler</div><div class="v">' + eur(aRegler) + '</div><div class="s">' + plural(state.cartes.filter((c) => cStatut(c) === "À régler").length, "carte") + '</div></div>' +
+    '<div class="kpi"><div class="l">En circulation</div><div class="v">' + actives.length + '</div><div class="s">' + eur(actives.reduce((s, c) => s + N(c.montant), 0)) + ' à honorer</div></div></section>' +
+    '<button class="dict" type="button" id="carte-new"><span class="di"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2.5 0-4.5-1-4.5-2.8S9.8 2.6 12 8zM12 8c2.5 0 4.5-1 4.5-2.8S14.2 2.6 12 8z"/></svg></span><span><b>Nouvelle carte cadeau</b><small>Entre le nom, le prénom ou l\'entreprise et le montant : la carte se crée aux couleurs Only One.</small></span></button>' +
+    '<div class="tools">' + chip("Toutes", "tout") + ["À régler", "Payée", "Utilisée", "Expirée"].map((s) => chip(s, s)).join("") + '<button type="button" class="chip" id="carte-vierge">Carte vierge (PNG)</button></div>' +
+    (list.length ? '<section><div class="list">' + list.map(row).join("") + "</div></section>"
+      : '<div class="empty"><p class="q">Aucune carte pour l\'instant</p><p>Crée ta première carte cadeau de Noël avec le bouton ci dessus.</p></div>');
+  $("#carte-new").addEventListener("click", () => carteForm());
+  $("#carte-vierge").addEventListener("click", async () => { await gcFontsReady(); cSavePng(drawGiftCard({}), "OnlyOne_CarteCadeau_Noel_vierge"); });
+  v.querySelectorAll("[data-cflt]").forEach((b) => b.addEventListener("click", () => { state.cfilter = b.dataset.cflt; render(); }));
+  v.querySelectorAll("[data-carte]").forEach((b) => b.addEventListener("click", () => carteForm(state.cartes.find((x) => x.id === b.dataset.carte))));
+}
+
+function carteForm(c) {
+  c = c || {};
+  const nn = c.id ? { annee: c.annee, num: c.num } : cNextNum();
+  const montant = c.montant || 100;
+  const chips = C_MONTANTS.map((m) => '<button type="button" class="chip" data-cm="' + m + '" aria-pressed="' + (m === Number(montant)) + '">' + eur(m) + "</button>").join("");
+  openSheet(head(c.id ? "Carte " + gcNum(c) : "Nouvelle carte cadeau") +
+    '<div class="gc-prev"><img id="gc-img" alt="Aperçu de la carte cadeau"></div>' +
+    '<form id="f-carte" novalidate>' +
+    '<div class="row2"><label>Prénom<input id="c-prenom" value="' + esc(c.prenom) + '" autocomplete="off"></label>' +
+    '<label>Nom<input id="c-nom" value="' + esc(c.nom) + '" autocomplete="off"></label></div>' +
+    '<label>Entreprise<input id="c-ent" value="' + esc(c.entreprise) + '" placeholder="Facultatif si prénom et nom remplis" autocomplete="off"></label>' +
+    '<label>De la part de<input id="c-par" value="' + esc(c.offertPar) + '" placeholder="Facultatif : qui offre la carte" autocomplete="off"></label>' +
+    '<label>Montant (de 50 € à 1 200 €)<div class="tools gc-chips">' + chips + '</div><input id="c-mt" type="number" inputmode="numeric" min="' + C_MIN + '" max="' + C_MAX + '" step="1" value="' + esc(montant) + '"></label>' +
+    '<div class="row2"><label>Valable jusqu\'au<input id="c-val" type="date" value="' + esc(c.validite || addDays(iso(), 365)) + '"></label>' +
+    '<label>Statut<select id="c-st">' + opts(C_STATUTS, c.statut || "À régler") + "</select></label></div>" +
+    '<label>Notes<textarea id="c-notes" rows="2" placeholder="Qui l\'a commandée, moyen de paiement, expérience choisie…">' + esc(c.notes) + "</textarea></label>" +
+    '<p class="hint" id="c-err" hidden></p>' +
+    '<div class="actions">' + (c.id ? '<button class="danger" type="button" id="c-del">Supprimer</button>' : "<span></span>") +
+    '<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-s" type="button" id="c-dl">Télécharger en PNG</button><button class="primary" type="submit">' + (c.id ? "Enregistrer" : "Créer la carte") + "</button></span></div></form>");
+  const val = () => ({
+    prenom: $("#c-prenom").value.trim(), nom: $("#c-nom").value.trim(), entreprise: $("#c-ent").value.trim(), offertPar: $("#c-par").value.trim(),
+    montant: Math.round(Number($("#c-mt").value) || 0), validite: $("#c-val").value, statut: $("#c-st").value, notes: $("#c-notes").value.trim(),
+    annee: nn.annee, num: nn.num
+  });
+  const check = (d) => !(d.prenom || d.nom || d.entreprise) ? "Indique au moins un nom, un prénom ou une entreprise." : !(d.montant >= C_MIN && d.montant <= C_MAX) ? "Le montant doit être compris entre 50 € et 1 200 €." : "";
+  let cv = null, tm = null;
+  const paint = async () => { await gcFontsReady(); cv = drawGiftCard(val()); const im = $("#gc-img"); if (im) im.src = cv.toDataURL("image/jpeg", 0.85); };
+  const later = () => { clearTimeout(tm); tm = setTimeout(paint, 250); };
+  paint();
+  $("#f-carte").addEventListener("input", (e) => {
+    if (e.target.id === "c-mt") document.querySelectorAll("[data-cm]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.cm) === Number(e.target.value))));
+    later();
+  });
+  $("#f-carte").addEventListener("change", later);
+  document.querySelectorAll("[data-cm]").forEach((b) => b.addEventListener("click", () => {
+    $("#c-mt").value = b.dataset.cm;
+    document.querySelectorAll("[data-cm]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    later();
+  }));
+  const showErr = (m) => { const e = $("#c-err"); e.textContent = m; e.hidden = !m; };
+  $("#c-dl").addEventListener("click", async () => {
+    const d = val(), m = check(d);
+    if (m) return showErr(m);
+    showErr("");
+    await gcFontsReady();
+    cSavePng(drawGiftCard(d), cFile(d));
+  });
+  $("#f-carte").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const d = val(), m = check(d);
+    if (m) return showErr(m);
+    try {
+      if (c.id) { const { id, ...prev } = c; await base.collection("cartes").doc(id).set({ ...prev, ...d, emiseLe: c.emiseLe || iso() }); }
+      else await base.collection("cartes").add({ ...d, emiseLe: iso() });
+      closeSheet(); toast(c.id ? "Carte mise à jour" : "Carte " + gcNum(d) + " créée");
+    } catch (err) { toast(errMsg(err)); }
+  });
+  const del = $("#c-del");
+  if (del) del.addEventListener("click", async () => {
+    if (!del.classList.contains("armed")) { del.classList.add("armed"); del.textContent = "Confirmer la suppression"; return; }
+    try { await base.collection("cartes").doc(c.id).delete(); closeSheet(); toast("Carte supprimée"); } catch (err) { toast(errMsg(err)); }
+  });
 }
 
 
